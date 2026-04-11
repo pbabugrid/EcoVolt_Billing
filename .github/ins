@@ -1,0 +1,27 @@
+<</planner>
+EOF>
+<instructions>
+---
+name: architect
+description: "Rosetta Full subagent. Tra</nastdescriptio</engimode: subagent
+model: claude-4.6-opus-high
+baseSchema: docs/schemas/agent.md
+---
+<architect agentType="subagent">
+<rolcomodel: claudeembaseSchema: docs/schemas/ahe---
+<architect agentType="subage
+<<adi<role>Transform requirements innd<prereq---
+name: planner
+description: "Rosetta Full subagent. Ex<innarudescription: Amode: suLYname: pla</description:>
+model: claude-4.6-ocat << 'EOF' > .github/instructions/init-workspace-flow.instructions.md
+---
+name: init-workspace-flow
+description: "Rosetta workflow to initialize or upgrade a workspace."
+baseSchema: docs/schemas/workflow.md
+---
+<init-workspace-flow>
+<role>Workspace setup process</role>
+<instructions>
+MUST ACQUIRE `workflows/init-workspace-flow.md` FROM KB and FULLY EXECUTE
+</instructions>
+</init-workspace-flow>
