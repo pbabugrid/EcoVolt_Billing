@@ -21,7 +21,16 @@ public class BillingDAO {
                     " off_peak_units, standard_units, peak_units, total_units, total_amount) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-    private static final int BATCH_SIZE = 5;
+     static final int BATCH_SIZE = 5;
+    private final int batchSize;
+
+    public BillingDAO() {
+        this(BATCH_SIZE);
+    }
+    public BillingDAO(int batchSize) {
+        if (batchSize < 1) throw new IllegalArgumentException("batchSize must be >= 1");
+        this.batchSize = batchSize;
+    }
 
     public int batchInsertBills(Connection connection, Collection<CustomerBill> bills)
             throws SQLException {
@@ -42,11 +51,11 @@ public class BillingDAO {
                 ps.addBatch();
                 count++;
 
-                if (count % BATCH_SIZE == 0) {
+                if (count % batchSize == 0) {
                     totalInserted += sum(ps.executeBatch());
                 }
             }
-            if (count % BATCH_SIZE != 0) {
+            if (count % batchSize != 0) {
                 totalInserted += sum(ps.executeBatch());
             }
         }
