@@ -1,6 +1,8 @@
 package com.ecovolt.model;
 
 import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * One parsed row from the CSV file.
@@ -14,8 +16,13 @@ public class CsvRow {
     private final double standardUnits;
     private final double peakUnits;
 
-    public CsvRow(int customerId, int meterId, LocalDate readingDate,
-                  double offPeakUnits, double standardUnits, double peakUnits) {
+    @JsonCreator
+    public CsvRow(@JsonProperty("customerId") int customerId,
+                  @JsonProperty("meterId") int meterId,
+                  @JsonProperty("readingDate") LocalDate readingDate,
+                  @JsonProperty("offPeakUnits") double offPeakUnits,
+                  @JsonProperty("standardUnits") double standardUnits,
+                  @JsonProperty("peakUnits") double peakUnits) {
         this.customerId = customerId;
         this.meterId = meterId;
         this.readingDate = readingDate;

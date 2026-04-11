@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "rosetta": {
+      "command": "npx",
+      "args": ["-y", "rosetta-ai", "mcp"]
+    }
+  }
+}
