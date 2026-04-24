@@ -3,8 +3,10 @@ package com.ecovolt.app;
 import com.ecovolt.model.CsvRow;
 import com.ecovolt.model.CustomerBill;
 import com.ecovolt.strategy.PricingStrategyFactory;
+import com.ecovolt.strategy.PricingStrategy;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,20 +35,34 @@ public class BillingProcessor {
      * same customer_id are summed into a single bill.
      */
     public Collection<CustomerBill> process(List<CsvRow> rows) {
+        if (rows == null) {
+            return Collections.emptyList();
+        }
+
         Map<Integer, CustomerBill> bills = new LinkedHashMap<>();
+
+        // Cache strategies locally to avoid method call overhead in the loop
+        PricingStrategy offPeakStrategy = strategies.offPeak();
+        PricingStrategy standardStrategy = strategies.standard();
+        PricingStrategy peakStrategy = strategies.peak();
 
         for (CsvRow row : rows) {
             // Strategy Pattern: each strategy calculates cost for its own interval
-            double cost = strategies.offPeak().calculateCost(row.getOffPeakUnits())
-                    + strategies.standard().calculateCost(row.getStandardUnits())
-                    + strategies.peak().calculateCost(row.getPeakUnits());
+            double cost = offPeakStrategy.calculateCost(row.getOffPeakUnits())
+                    + standardStrategy.calculateCost(row.getStandardUnits())
+                    + peakStrategy.calculateCost(row.getPeakUnits());
 
-            bills.computeIfAbsent(row.getCustomerId(), CustomerBill::new)
-                    .add(row.getReadingDate(),
-                            row.getOffPeakUnits(),
-                            row.getStandardUnits(),
-                            row.getPeakUnits(),
-                            cost);
+            CustomerBill bill = bills.get(row.getCustomerId());
+            if (bill == null) {
+                bill = new CustomerBill(row.getCustomerId());
+                bills.put(row.getCustomerId(), bill);
+            }
+
+            bill.add(row.getReadingDate(),
+                    row.getOffPeakUnits(),
+                    row.getStandardUnits(),
+                    row.getPeakUnits(),
+                    cost);
         }
 
         return bills.values();
