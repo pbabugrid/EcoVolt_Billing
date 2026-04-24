@@ -85,6 +85,11 @@ public class MainApplication {
         int inserted = new BillingDAO().batchInsertBills(conn, bills);
         System.out.println("Bills inserted     : " + inserted);
 
+        // Step 6 — Export bills to CSV
+        String exportPath = "target/billing_report.csv";
+        new CsvExporter().export(bills, exportPath);
+        System.out.println("Bills exported to  : " + exportPath);
+
         printSummary(bills);
     }
 
