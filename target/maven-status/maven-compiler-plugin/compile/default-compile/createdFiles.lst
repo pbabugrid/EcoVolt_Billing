@@ -4,6 +4,7 @@ com/ecovolt/config/DatabaseConfig.class
 com/ecovolt/strategy/OffPeakPricingStrategy.class
 com/ecovolt/model/Meter.class
 com/ecovolt/dao/BillingDAO.class
+com/ecovolt/app/JsonExporter.class
 com/ecovolt/model/Customer.class
 com/ecovolt/strategy/PricingStrategyFactory.class
 com/ecovolt/strategy/PricingStrategy.class
@@ -15,4 +16,5 @@ com/ecovolt/model/CustomerBill.class
 com/ecovolt/dao/MeterDAO.class
 com/ecovolt/dao/CustomerDAO.class
 com/ecovolt/strategy/StandardPricingStrategy.class
+com/ecovolt/strategy/WeekendPricingStrategy.class
 com/ecovolt/model/UnitPrice.class

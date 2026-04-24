@@ -16,6 +16,11 @@ public class CustomerBill {
     private double totalUnits;
     private double totalAmount;
 
+    // Default constructor for Jackson Deserialization
+    public CustomerBill() {
+        this.customerId = 0;
+    }
+
     public CustomerBill(int customerId) {
         this.customerId = customerId;
     }

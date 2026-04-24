@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.io.File;
 
 /**
  * Batch Processing Engine — orchestrator only.
@@ -84,6 +85,11 @@ public class MainApplication {
         // Step 5 — JDBC batch insert
         int inserted = new BillingDAO().batchInsertBills(conn, bills);
         System.out.println("Bills inserted     : " + inserted);
+
+        // Step 6 - Export bills to JSON
+        String jsonPath = "bills_output.json";
+        new JsonExporter().exportBillsToJson(bills, jsonPath);
+        System.out.println("Bills exported     : " + new File(jsonPath).getAbsolutePath());
 
         printSummary(bills);
     }
