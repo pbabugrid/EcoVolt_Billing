@@ -1,0 +1,53 @@
+{
+  "description": "EcoVolt Billing is a utility billing platform centered on customer, meter, meter reading, invoice, and future payment/reporting workflows.",
+  "servicesDescription": {
+    "billing-service": "Spring Boot service for EcoVolt utility billing domain operations."
+  },
+  "codingAgents": [
+    "copilot"
+  ],
+  "sdlc": {
+    "issue_tracker": "[ISSUE_TRACKER - e.g. Jira, GitHub Issues, Linear]",
+    "issue_tracker_project": "[ISSUE_TRACKER_URL - e.g. https://myorg.atlassian.net/jira/...]",
+    "wiki": "[WIKI - e.g. Confluence, Notion, GitHub Wiki]",
+    "wiki_project": "[WIKI_URL - e.g. https://myorg.atlassian.net/wiki/...]",
+    "test_management": "[TEST_MANAGEMENT - e.g. TestRail, Zephyr; omit if not used]",
+    "test_management_project": "[TEST_MANAGEMENT_PROJECT - project key or URL]",
+    "scm": "GitHub",
+    "scm_project": "https://github.com/pbabugrid/EcoVolt_Billing",
+    "build_management": "[BUILD_MANAGEMENT - e.g. GitHub Actions, Jenkins, CircleCI]",
+    "build_management_project": "[BUILD_MANAGEMENT_URL - e.g. https://github.com/org/repo/actions]",
+    "ux": "[UX_TOOL - e.g. Figma, Sketch; omit if not applicable]",
+    "ux_project": "[UX_PROJECT - project name or URL]",
+    "infrastructure": "[INFRASTRUCTURE - e.g. Kubernetes, ECS, serverless]",
+    "infrastructure_project": "[INFRASTRUCTURE_PROJECT - project name or cluster name]",
+    "iac": "[IAC_TOOL - e.g. Terraform, Pulumi, CDK; omit if not applicable]",
+    "iac_project": "[IAC_PROJECT - project or workspace name]",
+    "hosting": "[HOSTING - e.g. AWS, GCP, Azure, on-prem]",
+    "hosting_project": "[HOSTING_PROJECT - project or account name]",
+    "monitoring": "Spring Boot Actuator",
+    "monitoring_project": "billing-service actuator endpoints",
+    "logging": "[LOGGING - e.g. Grafana, Splunk, ELK]",
+    "logging_project": "[LOGGING_PROJECT - dashboard URL or project name]",
+    "security": "[SECURITY_TOOL - e.g. Vault, AWS Secrets Manager; omit if not applicable]",
+    "security_project": "[SECURITY_PROJECT - project or namespace]",
+    "collaboration_project": "[COLLABORATION_PROJECT - team or community name]",
+    "unit_tests": "billing-service/src/test",
+    "integration_tests": "billing-service/src/test",
+    "e2e_tests": "[E2E_TESTS_LOCATION - e.g. in-repository, separate repo]",
+    "performance_tests": "[PERFORMANCE_TESTS_LOCATION - omit if none]",
+    "testing_harness": "Gradle test task",
+    "code_graph": "[CODE_GRAPH_TOOL - e.g. GitNexus, CodeScene; omit if not used]"
+  },
+  "vocabulary": {
+    "Customer": "Utility billing account holder.",
+    "Meter": "Utility consumption measurement device associated with a customer.",
+    "Meter Reading": "Recorded utility usage value for a meter.",
+    "Invoice": "Billing document generated from customer usage and tariff logic.",
+    "Payment": "Future-scope customer payment toward an invoice.",
+    "Reporting": "Future-scope billing reporting capability."
+  },
+  "versions": {
+    "rosetta": "2.0"
+  }
+}

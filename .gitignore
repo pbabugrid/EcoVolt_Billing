@@ -8,6 +8,11 @@
 # Archives
 *.zip
 
+# Rosetta
+agents/TEMP/
+refsrc/
+!refsrc/INDEX.md
+
 # Gradle / build artifacts
 .gradle/
 build/
