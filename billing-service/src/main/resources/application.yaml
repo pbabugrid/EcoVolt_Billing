@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: billing-service
+  datasource:
+    url: jdbc:h2:mem:ecovolt
+
+  h2:
+    console:
+      enabled: true
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true

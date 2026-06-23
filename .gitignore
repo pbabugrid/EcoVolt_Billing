@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+**/.DS_Store
+
+# IDE
+.idea/
+
+# Archives
+*.zip
+
+# Gradle / build artifacts
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
