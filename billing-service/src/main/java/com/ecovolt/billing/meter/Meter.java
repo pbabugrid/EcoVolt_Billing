@@ -4,6 +4,7 @@ package com.ecovolt.billing.meter;
 import com.ecovolt.billing.common.BaseEntity;
 import com.ecovolt.billing.customer.Customer;
 import com.ecovolt.billing.reading.MeterReading;
+import com.ecovolt.billing.tariff.TariffType;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,6 +52,11 @@ public class Meter extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MeterStatus status;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tariff_type", nullable = false, length = 32)
+    private TariffType tariffType = TariffType.RESIDENTIAL;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false)

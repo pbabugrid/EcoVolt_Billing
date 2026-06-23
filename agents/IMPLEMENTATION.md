@@ -24,6 +24,16 @@ Style: concise, grep-friendly, and non-duplicative.
 - **Tests added**: `InvoiceGenerationServiceTest` (Mockito unit tests covering single-meter, multi-meter, duplicate, no-readings, negative consumption scenarios), `MeterReadingServiceTest` (Mockito unit tests covering duplicate date and monotonicity validation), and `InvoiceGenerationIntegrationTest` (Spring Boot `@Transactional` integration tests covering same-meter ordering, multi-meter generation, one-reading meter skip, duplicate replay, partial-duplicate multi-meter scenarios, and REST invoice generation response/error mapping).
 - **docs/ARCHITECTURE.md** updated to reflect same-meter billing logic, `List<InvoiceResponse>` contract, and test coverage.
 
+## 2026-06-24 — Tariff plans implemented
+
+- Added versioned tariff plan domain model with `RESIDENTIAL`, `COMMERCIAL`, and `INDUSTRIAL` tariff types, effective windows, active state, and ordered slabs.
+- Added tariff plan REST APIs for create, list, get by id, and deactivate/close version.
+- Replaced flat-rate invoice tariff calculation with active tariff lookup by meter tariff type and invoice generated date.
+- Added invoice tariff audit fields: tariff plan, tariff type, and tariff version.
+- Added Flyway migrations for baseline billing schema plus default local/test tariff plans; Hibernate now validates schema.
+- Added tariff service/controller integration tests and updated invoice tests for active tariff calculation.
+- Validation: Gradle `test` passes.
+
 - Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
 - Created root and service README files for workspace navigation and local service entry points.
 - Updated initialization workflow state to COMPLETE after Phase 8 verification.

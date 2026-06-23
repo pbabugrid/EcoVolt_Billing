@@ -18,6 +18,9 @@ Describe configuration categories and behavior only; never copy raw secret-like 
 ### Keep product context separate from technical architecture [ACTIVE]
 Put stakeholder-visible purpose in `docs/CONTEXT.md`; put modules, APIs, persistence, and build/runtime details in `docs/ARCHITECTURE.md`.
 
+### Update tests when service contracts change [ACTIVE]
+When replacing a simple method contract with richer domain output, update direct mocks and helper factories in the same pass.
+
 ### <Generalized Preventive Rule> [ACTIVE|RETIRED]
 [Root cause, Reasons, Problems]
 

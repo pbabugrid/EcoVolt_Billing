@@ -4,6 +4,8 @@ package com.ecovolt.billing.invoice;
 import com.ecovolt.billing.common.BaseEntity;
 import com.ecovolt.billing.customer.Customer;
 import com.ecovolt.billing.reading.MeterReading;
+import com.ecovolt.billing.tariff.TariffPlan;
+import com.ecovolt.billing.tariff.TariffType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -59,6 +61,13 @@ public class Invoice extends BaseEntity {
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal amount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tariff_type", length = 32)
+    private TariffType tariffType;
+
+    @Column(name = "tariff_version")
+    private Integer tariffVersion;
+
     @Column(name = "generated_date", nullable = false)
     private LocalDate generatedDate;
 
@@ -77,4 +86,8 @@ public class Invoice extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "current_reading_id", nullable = false, updatable = false)
     private MeterReading currentReadingRecord;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tariff_plan_id", updatable = false)
+    private TariffPlan tariffPlan;
 }

@@ -8,6 +8,7 @@ import com.ecovolt.billing.meter.Meter;
 import com.ecovolt.billing.meter.MeterRepository;
 import com.ecovolt.billing.reading.MeterReading;
 import com.ecovolt.billing.reading.MeterReadingRepository;
+import com.ecovolt.billing.tariff.TariffCalculation;
 import com.ecovolt.billing.tariff.TariffService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -72,7 +73,9 @@ public class InvoiceGenerationService {
                                 .formatted(currentValue, previousValue, meter.getMeterNumber()));
             }
 
-            BigDecimal amount = tariffService.calculateAmount(unitsConsumed);
+            LocalDate generatedDate = LocalDate.now();
+            TariffCalculation calculation = tariffService.calculateAmount(
+                    meter.getTariffType(), unitsConsumed, generatedDate);
 
             Invoice invoice = Invoice.builder()
                     .invoiceNumber(generateInvoiceNumber())
@@ -80,8 +83,11 @@ public class InvoiceGenerationService {
                     .previousReading(previousValue)
                     .currentReading(currentValue)
                     .unitsConsumed(unitsConsumed)
-                    .amount(amount)
-                    .generatedDate(LocalDate.now())
+                    .amount(calculation.amount())
+                    .tariffPlan(calculation.tariffPlan())
+                    .tariffType(calculation.tariffPlan().getType())
+                    .tariffVersion(calculation.tariffPlan().getVersion())
+                    .generatedDate(generatedDate)
                     .status(InvoiceStatus.GENERATED)
                     .previousReadingRecord(previous)
                     .currentReadingRecord(current)

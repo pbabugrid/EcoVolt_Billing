@@ -8,7 +8,10 @@ import com.ecovolt.billing.meter.Meter;
 import com.ecovolt.billing.meter.MeterRepository;
 import com.ecovolt.billing.reading.MeterReading;
 import com.ecovolt.billing.reading.MeterReadingRepository;
+import com.ecovolt.billing.tariff.TariffCalculation;
+import com.ecovolt.billing.tariff.TariffPlan;
 import com.ecovolt.billing.tariff.TariffService;
+import com.ecovolt.billing.tariff.TariffType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,7 +79,8 @@ class InvoiceGenerationServiceTest {
         when(invoiceRepository.existsByInvoiceNumber(anyString())).thenReturn(false);
         Invoice saved = savedInvoice(customer, prev, curr, new BigDecimal("50.00"), new BigDecimal("250.00"));
         when(invoiceRepository.save(any(Invoice.class))).thenReturn(saved);
-        when(tariffService.calculateAmount(new BigDecimal("50.00"))).thenReturn(new BigDecimal("250.00"));
+        when(tariffService.calculateAmount(any(TariffType.class), any(BigDecimal.class), any(LocalDate.class)))
+                .thenReturn(tariffCalculation(new BigDecimal("250.00")));
 
         List<InvoiceResponse> result = service.generateForCustomer(1L);
 
@@ -102,7 +106,8 @@ class InvoiceGenerationServiceTest {
         when(invoiceRepository.existsByCustomer_IdAndPreviousReadingRecord_IdAndCurrentReadingRecord_Id(
                 anyLong(), anyLong(), anyLong())).thenReturn(false);
         when(invoiceRepository.existsByInvoiceNumber(anyString())).thenReturn(false);
-        when(tariffService.calculateAmount(any())).thenReturn(new BigDecimal("300.00"));
+        when(tariffService.calculateAmount(any(TariffType.class), any(BigDecimal.class), any(LocalDate.class)))
+                .thenReturn(tariffCalculation(new BigDecimal("300.00")));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> {
             Invoice i = inv.getArgument(0);
             setId(i, (long) (Math.random() * 1000 + 1));
@@ -128,7 +133,8 @@ class InvoiceGenerationServiceTest {
         when(invoiceRepository.existsByCustomer_IdAndPreviousReadingRecord_IdAndCurrentReadingRecord_Id(
                 anyLong(), anyLong(), anyLong())).thenReturn(false);
         when(invoiceRepository.existsByInvoiceNumber(anyString())).thenReturn(false);
-        when(tariffService.calculateAmount(any())).thenReturn(new BigDecimal("250.00"));
+        when(tariffService.calculateAmount(any(TariffType.class), any(BigDecimal.class), any(LocalDate.class)))
+                .thenReturn(tariffCalculation(new BigDecimal("250.00")));
         Invoice saved = savedInvoice(customer, m1prev, m1curr, new BigDecimal("50.00"), new BigDecimal("250.00"));
         when(invoiceRepository.save(any(Invoice.class))).thenReturn(saved);
 
@@ -154,7 +160,8 @@ class InvoiceGenerationServiceTest {
         when(invoiceRepository.existsByCustomer_IdAndPreviousReadingRecord_IdAndCurrentReadingRecord_Id(
                 anyLong(), anyLong(), anyLong())).thenReturn(false);
         when(invoiceRepository.existsByInvoiceNumber(anyString())).thenReturn(false);
-        when(tariffService.calculateAmount(any())).thenReturn(new BigDecimal("250.00"));
+        when(tariffService.calculateAmount(any(TariffType.class), any(BigDecimal.class), any(LocalDate.class)))
+                .thenReturn(tariffCalculation(new BigDecimal("250.00")));
         when(invoiceRepository.save(any(Invoice.class))).thenReturn(
                 savedInvoice(customer, prev, curr, new BigDecimal("50.00"), new BigDecimal("250.00")));
 
@@ -250,7 +257,8 @@ class InvoiceGenerationServiceTest {
                 1L, 3L, 4L)).thenReturn(false);
 
         when(invoiceRepository.existsByInvoiceNumber(anyString())).thenReturn(false);
-        when(tariffService.calculateAmount(any())).thenReturn(new BigDecimal("400.00"));
+        when(tariffService.calculateAmount(any(TariffType.class), any(BigDecimal.class), any(LocalDate.class)))
+                .thenReturn(tariffCalculation(new BigDecimal("400.00")));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> {
             Invoice i = inv.getArgument(0);
             setId(i, 99L);
@@ -308,6 +316,18 @@ class InvoiceGenerationServiceTest {
                 .build();
         setId(i, 100L);
         return i;
+    }
+
+    private static TariffCalculation tariffCalculation(BigDecimal amount) {
+        TariffPlan plan = TariffPlan.builder()
+                .type(TariffType.RESIDENTIAL)
+                .version(1)
+                .name("Residential v1")
+                .effectiveFrom(LocalDate.of(2024, 1, 1))
+                .active(true)
+                .build();
+        setId(plan, 1L);
+        return new TariffCalculation(amount, plan);
     }
 
     /** Reflectively sets the id field on BaseEntity subclasses (no setter on @Id field). */

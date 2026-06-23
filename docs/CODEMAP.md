@@ -75,7 +75,7 @@ Generated / ignored: `.gradle/`, `build/`
 
 Files: `gradle-wrapper.jar` _(binary)_, `gradle-wrapper.properties`
 
-### /billing-service/src/main/java/com/ecovolt/billing — 35 Java source files
+### /billing-service/src/main/java/com/ecovolt/billing — 45 Java source files
 
 Files (root): `BillingServiceApplication.java`
 
@@ -123,17 +123,25 @@ Files: `MeterReading.java`, `MeterReadingController.java`, `MeterReadingReposito
 
 Files: `MeterReadingRequest.java`, `MeterReadingResponse.java`
 
-#### …/tariff — 1 file — tariff calculation
+#### …/tariff — 8 files — tariff plans and calculation
 
-Files: `TariffService.java`
+Files: `TariffCalculation.java`, `TariffController.java`, `TariffPlan.java`, `TariffPlanRepository.java`, `TariffService.java`, `TariffSlab.java`, `TariffType.java`
 
-### /billing-service/src/main/resources — 1 file — runtime config
+##### …/tariff/dto — 4 files
+
+Files: `TariffPlanRequest.java`, `TariffPlanResponse.java`, `TariffSlabRequest.java`, `TariffSlabResponse.java`
+
+### /billing-service/src/main/resources — 3 files — runtime config and migrations
 
 Files: `application.yaml`
 
 Config categories: `spring.application`, `spring.datasource` (H2 in-memory), `spring.h2.console`, `spring.jpa` (ddl-auto, show-sql)
 
-### /billing-service/src/test/java/com/ecovolt/billing — 4 files — automated tests
+#### /billing-service/src/main/resources/db/migration — 2 files — Flyway migrations
+
+Files: `V1__baseline_billing_schema.sql`, `V2__seed_default_tariff_plans.sql`
+
+### /billing-service/src/test/java/com/ecovolt/billing — 6 files — automated tests
 
 Files: `BillingServiceApplicationTests.java`
 
@@ -144,3 +152,7 @@ Files: `InvoiceGenerationIntegrationTest.java`, `InvoiceGenerationServiceTest.ja
 #### …/reading — 1 file
 
 Files: `MeterReadingServiceTest.java`
+
+#### …/tariff — 2 files
+
+Files: `TariffControllerIntegrationTest.java`, `TariffServiceIntegrationTest.java`

@@ -6,6 +6,7 @@ import com.ecovolt.billing.exception.BillingException;
 import com.ecovolt.billing.exception.ResourceNotFoundException;
 import com.ecovolt.billing.meter.dto.MeterRequest;
 import com.ecovolt.billing.meter.dto.MeterResponse;
+import com.ecovolt.billing.tariff.TariffType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class MeterService {
                 .meterNumber(request.meterNumber())
                 .installationDate(request.installationDate())
                 .status(MeterStatus.ACTIVE)
+                .tariffType(request.tariffType() == null ? TariffType.RESIDENTIAL : request.tariffType())
                 .customer(customer)
                 .build();
         return MeterResponse.from(meterRepository.save(meter));

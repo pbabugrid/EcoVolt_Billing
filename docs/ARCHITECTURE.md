@@ -24,8 +24,8 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - `customer`: customer entity, status enum, repository, service, controller, and DTOs.
 - `meter`: meter entity, status enum, repository, service, controller, and DTOs.
 - `reading`: meter reading entity, repository, service, controller, and DTOs.
-- `invoice`: invoice entity, status enum, repository, read service, generation service, controller, and response DTO.
-- `tariff`: flat-rate tariff calculation service.
+- `invoice`: invoice entity, status enum, repository, read service, generation service, controller, and response DTO; invoices retain tariff plan/type/version snapshot fields.
+- `tariff`: versioned tariff plans, ordered slabs, repository, service, controller, and DTOs.
 - `exception`: typed domain exceptions and centralized REST error handling.
 - `config`: OpenAPI metadata configuration.
 
@@ -35,15 +35,17 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - `POST /api/meters`, `GET /api/meters`.
 - `POST /api/readings`, `GET /api/readings`.
 - `POST /api/invoices/generate/{customerId}`, `GET /api/invoices`, `GET /api/invoices/{id}`.
+- `POST /api/tariff-plans`, `GET /api/tariff-plans`, `GET /api/tariff-plans/{id}`, `PUT /api/tariff-plans/{id}/deactivate`.
 - POST endpoints return `201 Created`; delete returns `204 No Content`; read endpoints return DTOs directly.
 
 ## Domain Relationships
 
 - Customer has many meters.
 - Customer has many invoices.
-- Meter belongs to one customer and has many readings.
+- Meter belongs to one customer, has many readings, and carries a tariff type (`RESIDENTIAL`, `COMMERCIAL`, or `INDUSTRIAL`).
 - Meter reading belongs to one meter.
 - Invoice belongs to one customer and references the previous and current meter reading records used to generate it.
+- Tariff plan has many ordered tariff slabs and is selected by tariff type plus invoice generation date.
 
 ## Persistence Design
 
@@ -51,7 +53,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - Business uniqueness is enforced for customer number, meter number, invoice number, meter/date reading pairs, and invoice source-reading pairs.
 - Entities extend `BaseEntity` for audit timestamps.
 - Relationships are lazy-loaded; child collections use cascade behavior where modeled.
-- Schema evolution currently uses Hibernate update mode in local runtime configuration.
+- Schema evolution uses Flyway SQL migrations; Hibernate validates the schema at runtime.
 
 ## Validation And Business Rules
 
@@ -62,7 +64,8 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - Target invoice generation requires at least two readings from the same meter, rejects duplicate invoices for the same source readings, rejects negative consumption, calculates amount from tariff, and creates invoices with generated status.
 - Invoice generation iterates all meters for a customer under a write lock; each meter with at least two readings generates one invoice using its latest two readings ordered by `readingDate DESC, id DESC`. Duplicate source-reading pairs are skipped silently; if no new invoice remains after skipping duplicates, a 422 is returned.
 - `POST /api/invoices/generate/{customerId}` returns `List<InvoiceResponse>` (HTTP 201) with one entry per newly generated invoice.
-- Tariff calculation is currently a flat rate of 5 currency units per consumption unit, rounded to two decimals.
+- Tariff plan creation rejects duplicate type/version pairs, invalid effective windows, overlapping active effective windows, non-continuous slabs, and closed final slabs.
+- Invoice generation calculates amount from the active tariff for the meter tariff type and generated date, using ordered slab bands and two-decimal rounding.
 
 ## Error Handling
 
@@ -74,7 +77,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 
 ## Testing Architecture
 
-- Testing Architecture: test coverage includes a context smoke test, unit tests for invoice generation and reading validation rules, and integration tests for multi-meter invoice generation, duplicate replay, and REST invoice-generation response/error mapping — all running against H2 in-memory.
+- Testing Architecture: test coverage includes a context smoke test, unit tests for invoice generation and reading validation rules, tariff service/controller integration tests, and integration tests for multi-meter invoice generation, duplicate replay, active-tariff calculation, and REST response/error mapping — all running against H2 in-memory.
 
 ## Build Architecture
 

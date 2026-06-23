@@ -19,6 +19,7 @@ Source: `billing-service/build.gradle`
 | `org.springframework.boot:spring-boot-starter-data-jpa` | managed by Boot BOM | JPA + Hibernate |
 | `org.springframework.boot:spring-boot-starter-validation` | managed by Boot BOM | Bean Validation (Jakarta) |
 | `org.springframework.boot:spring-boot-starter-web` | managed by Boot BOM | Spring MVC, embedded Tomcat |
+| `org.flywaydb:flyway-core` | managed by Boot BOM | SQL schema migrations |
 | `org.springdoc:springdoc-openapi-starter-webmvc-ui` | 2.8.14 | Swagger UI + OpenAPI 3 |
 
 ## Runtime-Only Dependencies

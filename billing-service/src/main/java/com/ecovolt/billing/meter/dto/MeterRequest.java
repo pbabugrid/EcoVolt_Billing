@@ -1,5 +1,6 @@
 package com.ecovolt.billing.meter.dto;
 
+import com.ecovolt.billing.tariff.TariffType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
@@ -18,6 +19,8 @@ public record MeterRequest(
 
         @NotNull(message = "installationDate is required")
         @PastOrPresent(message = "installationDate cannot be in the future")
-        LocalDate installationDate
+        LocalDate installationDate,
+
+        TariffType tariffType
 ) {
 }

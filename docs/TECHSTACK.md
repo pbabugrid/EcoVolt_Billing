@@ -31,7 +31,8 @@
 
 | Item | Value | Source |
 |------|-------|--------|
-| ORM | Hibernate (via Spring Data JPA) | `build.gradle` + `application.yaml` `jpa.hibernate.ddl-auto: update` |
+| ORM | Hibernate (via Spring Data JPA) | `build.gradle` + `application.yaml` `jpa.hibernate.ddl-auto: validate` |
+| Migrations | Flyway SQL migrations | `billing-service/src/main/resources/db/migration` |
 | Database | H2 in-memory (`jdbc:h2:mem:ecovolt`) | `billing-service/src/main/resources/application.yaml`; local development/test only |
 | H2 Console | enabled | `application.yaml`; local development/test only |
 
