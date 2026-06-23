@@ -16,7 +16,7 @@
 
 ### Skipped (with reason)
 
-- `testing-pattern.md` — insufficient evidence; only one smoke test (`BillingServiceApplicationTests.contextLoads`); pattern not yet established
+- `testing-pattern.md` — recurring test style is emerging in invoice/reading coverage, but broad cross-module evidence is not yet sufficient for a stable pattern document
 - `config/OpenApiConfig.java` — single class, no recurrence
 - `tariff/TariffService.java` — single strategy instance; recurrence not yet present
 

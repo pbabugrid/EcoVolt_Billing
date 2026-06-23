@@ -24,8 +24,8 @@ public class InvoiceController {
     private final InvoiceGenerationService invoiceGenerationService;
 
     @PostMapping("/generate/{customerId}")
-    @Operation(summary = "Generate an invoice for a customer from the latest two readings")
-    public ResponseEntity<InvoiceResponse> generate(@PathVariable Long customerId) {
+    @Operation(summary = "Generate invoices for a customer from the latest two readings per meter")
+    public ResponseEntity<List<InvoiceResponse>> generate(@PathVariable Long customerId) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(invoiceGenerationService.generateForCustomer(customerId));
     }

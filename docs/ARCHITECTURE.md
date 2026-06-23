@@ -60,7 +60,8 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - Meter registration requires an existing customer and a unique meter number; meters start active.
 - Reading capture rejects duplicate meter/date readings and rejects values that would break chronological monotonicity relative to adjacent readings.
 - Target invoice generation requires at least two readings from the same meter, rejects duplicate invoices for the same source readings, rejects negative consumption, calculates amount from tariff, and creates invoices with generated status.
-- Current source appears to select the latest two readings across a customer; track same-meter alignment in `docs/TODO.md`.
+- Invoice generation iterates all meters for a customer under a write lock; each meter with at least two readings generates one invoice using its latest two readings ordered by `readingDate DESC, id DESC`. Duplicate source-reading pairs are skipped silently; if no new invoice remains after skipping duplicates, a 422 is returned.
+- `POST /api/invoices/generate/{customerId}` returns `List<InvoiceResponse>` (HTTP 201) with one entry per newly generated invoice.
 - Tariff calculation is currently a flat rate of 5 currency units per consumption unit, rounded to two decimals.
 
 ## Error Handling
@@ -73,9 +74,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 
 ## Testing Architecture
 
-- Test framework: Spring Boot Test with JUnit Platform.
-- Current test coverage is a single application context smoke test.
-- No source-evidenced unit, controller, repository, invoice-generation, or validation scenario tests are present.
+- Testing Architecture: test coverage includes a context smoke test, unit tests for invoice generation and reading validation rules, and integration tests for multi-meter invoice generation, duplicate replay, and REST invoice-generation response/error mapping — all running against H2 in-memory.
 
 ## Build Architecture
 

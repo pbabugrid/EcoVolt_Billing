@@ -133,6 +133,14 @@ Files: `application.yaml`
 
 Config categories: `spring.application`, `spring.datasource` (H2 in-memory), `spring.h2.console`, `spring.jpa` (ddl-auto, show-sql)
 
-### /billing-service/src/test/java/com/ecovolt/billing — 1 file — integration test
+### /billing-service/src/test/java/com/ecovolt/billing — 4 files — automated tests
 
 Files: `BillingServiceApplicationTests.java`
+
+#### …/invoice — 2 files
+
+Files: `InvoiceGenerationIntegrationTest.java`, `InvoiceGenerationServiceTest.java`
+
+#### …/reading — 1 file
+
+Files: `MeterReadingServiceTest.java`

@@ -43,8 +43,8 @@ Style: concise, forward-referenced, and revalidated after documentation changes.
 
 - Resolution: Target invoice generation should use same-meter readings.
 - Confidence: High.
-- Evidence: user confirmation during Rosetta initialization; current source gap indicated by `MeterReadingRepository.findTop2ByMeter_Customer_IdOrderByReadingDateDescIdDesc` and `InvoiceGenerationService.generateForCustomer`.
-- Updated: `docs/CONTEXT.md`, `docs/ARCHITECTURE.md`, `docs/TODO.md`, future requirements docs.
+- Evidence: user confirmation during Rosetta initialization; implemented by per-meter invoice generation using `MeterReadingRepository.findTop2ByMeter_IdOrderByReadingDateDescIdDesc`.
+- Updated: `docs/CONTEXT.md`, `docs/ARCHITECTURE.md`, `docs/TODO.md`, `agents/IMPLEMENTATION.md`, and invoice generation tests.
 
 ## Resolved H2 persistence scope
 

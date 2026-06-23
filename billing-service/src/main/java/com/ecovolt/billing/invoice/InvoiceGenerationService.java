@@ -4,6 +4,8 @@ import com.ecovolt.billing.customer.Customer;
 import com.ecovolt.billing.customer.CustomerService;
 import com.ecovolt.billing.exception.BillingException;
 import com.ecovolt.billing.invoice.dto.InvoiceResponse;
+import com.ecovolt.billing.meter.Meter;
+import com.ecovolt.billing.meter.MeterRepository;
 import com.ecovolt.billing.reading.MeterReading;
 import com.ecovolt.billing.reading.MeterReadingRepository;
 import com.ecovolt.billing.tariff.TariffService;
@@ -13,71 +15,94 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * Billing service.
- * Pipeline: find latest two readings -> compute consumption -> apply tariff -> persist invoice.
+ * Pipeline: for each customer meter with at least two readings, use the latest two readings
+ * from that same meter to compute consumption, apply tariff, and persist an invoice.
+ * Duplicate source-reading pairs are skipped; if all eligible pairs are already invoiced, throws 422.
  */
 @Service
 @RequiredArgsConstructor
 public class InvoiceGenerationService {
 
     private final MeterReadingRepository meterReadingRepository;
+    private final MeterRepository meterRepository;
     private final InvoiceRepository invoiceRepository;
     private final CustomerService customerService;
     private final TariffService tariffService;
 
     @Transactional
-    public InvoiceResponse generateForCustomer(Long customerId) {
+    public List<InvoiceResponse> generateForCustomer(Long customerId) {
         Customer customer = customerService.getCustomerOrThrow(customerId);
 
-        List<MeterReading> readings =
-                meterReadingRepository.findTop2ByMeter_Customer_IdOrderByReadingDateDescIdDesc(customerId);
+        List<Meter> meters = meterRepository.findByCustomer_IdOrderByIdAsc(customerId);
 
-        if (readings.size() < 2) {
+        boolean anyMeterHasTwoReadings = false;
+        List<InvoiceResponse> created = new ArrayList<>();
+
+        for (Meter meter : meters) {
+            List<MeterReading> readings =
+                    meterReadingRepository.findTop2ByMeter_IdOrderByReadingDateDescIdDesc(meter.getId());
+
+            if (readings.size() < 2) {
+                continue;
+            }
+            anyMeterHasTwoReadings = true;
+
+            MeterReading current  = readings.get(0);
+            MeterReading previous = readings.get(1);
+
+            // Skip duplicate pairs silently within a batch.
+            if (invoiceRepository.existsByCustomer_IdAndPreviousReadingRecord_IdAndCurrentReadingRecord_Id(
+                    customerId, previous.getId(), current.getId())) {
+                continue;
+            }
+
+            BigDecimal currentValue  = current.getReadingValue();
+            BigDecimal previousValue = previous.getReadingValue();
+            BigDecimal unitsConsumed = currentValue.subtract(previousValue);
+
+            if (unitsConsumed.signum() < 0) {
+                throw new BillingException(
+                        "Current reading (%s) is lower than previous reading (%s) for meter %s; cannot bill negative consumption"
+                                .formatted(currentValue, previousValue, meter.getMeterNumber()));
+            }
+
+            BigDecimal amount = tariffService.calculateAmount(unitsConsumed);
+
+            Invoice invoice = Invoice.builder()
+                    .invoiceNumber(generateInvoiceNumber())
+                    .customer(customer)
+                    .previousReading(previousValue)
+                    .currentReading(currentValue)
+                    .unitsConsumed(unitsConsumed)
+                    .amount(amount)
+                    .generatedDate(LocalDate.now())
+                    .status(InvoiceStatus.GENERATED)
+                    .previousReadingRecord(previous)
+                    .currentReadingRecord(current)
+                    .build();
+
+            created.add(InvoiceResponse.from(invoiceRepository.save(invoice)));
+        }
+
+        if (!anyMeterHasTwoReadings) {
             throw new BillingException(
                     "At least two meter readings are required to generate an invoice for customer id %d"
                             .formatted(customerId));
         }
 
-        MeterReading current = readings.get(0);
-        MeterReading previous = readings.get(1);
-
-        if (invoiceRepository.existsByCustomer_IdAndPreviousReadingRecord_IdAndCurrentReadingRecord_Id(
-                customerId, previous.getId(), current.getId())) {
+        if (created.isEmpty()) {
             throw new BillingException(
-                    "An invoice already exists for customer id %d using readings %d and %d"
-                            .formatted(customerId, previous.getId(), current.getId()));
+                    "All eligible meter reading pairs for customer id %d have already been invoiced"
+                            .formatted(customerId));
         }
 
-        BigDecimal currentReading = current.getReadingValue();
-        BigDecimal previousReading = previous.getReadingValue();
-        BigDecimal unitsConsumed = currentReading.subtract(previousReading);
-
-        if (unitsConsumed.signum() < 0) {
-            throw new BillingException(
-                    "Current reading (%s) is lower than previous reading (%s); cannot bill negative consumption"
-                            .formatted(currentReading, previousReading));
-        }
-
-        BigDecimal amount = tariffService.calculateAmount(unitsConsumed);
-
-        Invoice invoice = Invoice.builder()
-                .invoiceNumber(generateInvoiceNumber())
-                .customer(customer)
-                .previousReading(previousReading)
-                .currentReading(currentReading)
-                .unitsConsumed(unitsConsumed)
-                .amount(amount)
-                .generatedDate(LocalDate.now())
-                .status(InvoiceStatus.GENERATED)
-                .previousReadingRecord(previous)
-                .currentReadingRecord(current)
-                .build();
-
-        return InvoiceResponse.from(invoiceRepository.save(invoice));
+        return created;
     }
 
     private String generateInvoiceNumber() {

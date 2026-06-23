@@ -71,6 +71,6 @@ Single configuration class; no recurring structure to abstract.
 
 Single-instance strategy service; pattern coverage is pending if a second tariff strategy is introduced.
 
-### BillingServiceApplicationTests.java
+### billing-service tests
 
-Single smoke test (`contextLoads`); no recurring test pattern to document.
+Current tests include the context smoke test plus focused service and integration tests for invoice generation and reading validation. A reusable test pattern document is pending until similar coverage exists across multiple modules.

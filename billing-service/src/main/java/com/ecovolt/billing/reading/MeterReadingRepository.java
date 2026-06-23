@@ -9,10 +9,10 @@ import java.util.Optional;
 public interface MeterReadingRepository extends JpaRepository<MeterReading, Long> {
 
     /**
-     * Returns the two most recent readings across all meters belonging to a customer,
-     * newest first. Ties on date are broken by id (latest persisted first).
+     * Returns the two most recent readings for a specific meter, newest first.
+     * Ties on date are broken by id (latest persisted first).
      */
-    List<MeterReading> findTop2ByMeter_Customer_IdOrderByReadingDateDescIdDesc(Long customerId);
+    List<MeterReading> findTop2ByMeter_IdOrderByReadingDateDescIdDesc(Long meterId);
 
     boolean existsByMeter_IdAndReadingDate(Long meterId, LocalDate readingDate);
 

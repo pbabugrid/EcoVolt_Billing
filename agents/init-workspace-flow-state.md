@@ -56,7 +56,7 @@
 - Resolved: Java 25 is the intended target.
 - Resolved: generated build/cache artifacts stay ignored; ZIP archives are local/reference artifacts unless explicitly promoted.
 - Resolved: payments and reporting are future scope.
-- Resolved: invoice generation target is same-meter readings; current source appears to need alignment.
+- Resolved: invoice generation uses same-meter readings and generates one invoice per eligible meter.
 - Resolved: H2 in-memory persistence is local development/test only.
 - Resolved: SDLC placeholders in `gain.json` are intentionally unresolved until real values are known.
 
