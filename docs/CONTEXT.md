@@ -16,7 +16,7 @@ Style: concise, grep-friendly, non-technical. Technical architecture belongs in 
 - Meter management: register meters and assign them to customers.
 - Meter reading capture: record dated meter readings and prevent inconsistent reading sequences.
 - Invoice generation: generate an invoice from same-meter readings and a flat tariff.
-- Invoice retrieval: list invoices and retrieve invoice details.
+- Invoice retrieval and lifecycle: list invoices, retrieve invoice details, mark invoices paid, and cancel invoices.
 
 ## Domain Vocabulary
 
@@ -28,5 +28,5 @@ Style: concise, grep-friendly, non-technical. Technical architecture belongs in 
 
 ## Future Scope
 
-- Payments are future scope; no payment source package or API is present under `billing-service/src/main/java/com/ecovolt/billing`.
+- External payment processing is future scope; invoice payment status transitions are handled in the invoice domain.
 - Reporting is future scope; no reporting source package or API is present under `billing-service/src/main/java/com/ecovolt/billing`.

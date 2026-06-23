@@ -34,6 +34,15 @@ Style: concise, grep-friendly, and non-duplicative.
 - Added tariff service/controller integration tests and updated invoice tests for active tariff calculation.
 - Validation: Gradle `test` passes.
 
+## 2026-06-24 — P1 customer retention and invoice lifecycle
+
+- **Safe customer retention**: `CustomerService.delete` now transitions customers to `INACTIVE` instead of physically deleting rows, preserving related meters, invoices, and entity audit history.
+- **Customer API**: `DELETE /api/customers/{id}` remains available and returns `204 No Content`, with OpenAPI summary updated to "Deactivate a customer".
+- **Invoice lifecycle APIs**: added `POST /api/invoices/{id}/pay` and `POST /api/invoices/{id}/cancel`, returning updated `InvoiceResponse`.
+- **Invoice lifecycle rules**: `GENERATED` and `OVERDUE` may transition to `PAID` or `CANCELLED`; `PAID` and `CANCELLED` are terminal for pay/cancel APIs and invalid transitions return 422 via `BillingException`.
+- **Tests added**: `CustomerRetentionIntegrationTest` for invoice-preserving customer deactivation and `InvoiceLifecycleIntegrationTest` for service/API lifecycle transitions.
+- **Validation**: Gradle `test --rerun-tasks` passes.
+
 - Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
 - Created root and service README files for workspace navigation and local service entry points.
 - Updated initialization workflow state to COMPLETE after Phase 8 verification.

@@ -41,4 +41,16 @@ public class InvoiceController {
     public InvoiceResponse findById(@PathVariable Long id) {
         return invoiceService.findById(id);
     }
+
+    @PostMapping("/{id}/pay")
+    @Operation(summary = "Mark an invoice as paid")
+    public InvoiceResponse pay(@PathVariable Long id) {
+        return invoiceService.pay(id);
+    }
+
+    @PostMapping("/{id}/cancel")
+    @Operation(summary = "Cancel an invoice")
+    public InvoiceResponse cancel(@PathVariable Long id) {
+        return invoiceService.cancel(id);
+    }
 }

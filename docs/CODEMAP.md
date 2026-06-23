@@ -141,13 +141,17 @@ Config categories: `spring.application`, `spring.datasource` (H2 in-memory), `sp
 
 Files: `V1__baseline_billing_schema.sql`, `V2__seed_default_tariff_plans.sql`
 
-### /billing-service/src/test/java/com/ecovolt/billing — 6 files — automated tests
+### /billing-service/src/test/java/com/ecovolt/billing — 8 files — automated tests
 
 Files: `BillingServiceApplicationTests.java`
 
-#### …/invoice — 2 files
+#### …/customer — 1 file
 
-Files: `InvoiceGenerationIntegrationTest.java`, `InvoiceGenerationServiceTest.java`
+Files: `CustomerRetentionIntegrationTest.java`
+
+#### …/invoice — 3 files
+
+Files: `InvoiceGenerationIntegrationTest.java`, `InvoiceGenerationServiceTest.java`, `InvoiceLifecycleIntegrationTest.java`
 
 #### …/reading — 1 file
 

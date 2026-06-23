@@ -53,7 +53,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a customer")
+    @Operation(summary = "Deactivate a customer")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         customerService.delete(id);
         return ResponseEntity.noContent().build();

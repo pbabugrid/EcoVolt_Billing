@@ -56,7 +56,7 @@ public class CustomerService {
     @Transactional
     public void delete(Long id) {
         Customer customer = getCustomerOrThrow(id);
-        customerRepository.delete(customer);
+        customer.setStatus(CustomerStatus.INACTIVE);
     }
 
     /**

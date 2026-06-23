@@ -24,7 +24,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - `customer`: customer entity, status enum, repository, service, controller, and DTOs.
 - `meter`: meter entity, status enum, repository, service, controller, and DTOs.
 - `reading`: meter reading entity, repository, service, controller, and DTOs.
-- `invoice`: invoice entity, status enum, repository, read service, generation service, controller, and response DTO; invoices retain tariff plan/type/version snapshot fields.
+- `invoice`: invoice entity, status enum, repository, lifecycle/read service, generation service, controller, and response DTO; invoices retain tariff plan/type/version snapshot fields.
 - `tariff`: versioned tariff plans, ordered slabs, repository, service, controller, and DTOs.
 - `exception`: typed domain exceptions and centralized REST error handling.
 - `config`: OpenAPI metadata configuration.
@@ -34,9 +34,9 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - `POST /api/customers`, `GET /api/customers`, `GET /api/customers/{id}`, `PUT /api/customers/{id}`, `DELETE /api/customers/{id}`.
 - `POST /api/meters`, `GET /api/meters`.
 - `POST /api/readings`, `GET /api/readings`.
-- `POST /api/invoices/generate/{customerId}`, `GET /api/invoices`, `GET /api/invoices/{id}`.
+- `POST /api/invoices/generate/{customerId}`, `GET /api/invoices`, `GET /api/invoices/{id}`, `POST /api/invoices/{id}/pay`, `POST /api/invoices/{id}/cancel`.
 - `POST /api/tariff-plans`, `GET /api/tariff-plans`, `GET /api/tariff-plans/{id}`, `PUT /api/tariff-plans/{id}/deactivate`.
-- POST endpoints return `201 Created`; delete returns `204 No Content`; read endpoints return DTOs directly.
+- Invoice generation returns `201 Created`; customer delete/deactivate returns `204 No Content`; read and invoice lifecycle endpoints return DTOs directly.
 
 ## Domain Relationships
 
@@ -59,6 +59,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 
 - Request DTO records use Jakarta Bean Validation for required fields, email format, phone format, length limits, dates not in the future, and non-negative reading values.
 - Customer creation assigns an active status and generated customer number.
+- Customer deletion is a safe-retention operation: `DELETE /api/customers/{id}` transitions the customer to `INACTIVE` instead of physically deleting the row, preserving meters, invoices, and audit history.
 - Meter registration requires an existing customer and a unique meter number; meters start active.
 - Reading capture rejects duplicate meter/date readings and rejects values that would break chronological monotonicity relative to adjacent readings.
 - Target invoice generation requires at least two readings from the same meter, rejects duplicate invoices for the same source readings, rejects negative consumption, calculates amount from tariff, and creates invoices with generated status.
@@ -66,6 +67,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - `POST /api/invoices/generate/{customerId}` returns `List<InvoiceResponse>` (HTTP 201) with one entry per newly generated invoice.
 - Tariff plan creation rejects duplicate type/version pairs, invalid effective windows, overlapping active effective windows, non-continuous slabs, and closed final slabs.
 - Invoice generation calculates amount from the active tariff for the meter tariff type and generated date, using ordered slab bands and two-decimal rounding.
+- Invoice lifecycle transitions allow `GENERATED` or `OVERDUE` invoices to become `PAID` or `CANCELLED`; `PAID` and `CANCELLED` are terminal for pay/cancel APIs and invalid transitions return 422.
 
 ## Error Handling
 
@@ -77,7 +79,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 
 ## Testing Architecture
 
-- Testing Architecture: test coverage includes a context smoke test, unit tests for invoice generation and reading validation rules, tariff service/controller integration tests, and integration tests for multi-meter invoice generation, duplicate replay, active-tariff calculation, and REST response/error mapping — all running against H2 in-memory.
+- Testing Architecture: test coverage includes a context smoke test, unit tests for invoice generation and reading validation rules, tariff service/controller integration tests, and integration tests for customer retention, invoice lifecycle transitions, multi-meter invoice generation, duplicate replay, active-tariff calculation, and REST response/error mapping — all running against H2 in-memory.
 
 ## Build Architecture
 
