@@ -85,6 +85,12 @@ Style: concise, grep-friendly, and non-duplicative.
 - Saved final full-suite results in `TEST-RESULTS.md`.
 - Validation: Gradle `test --no-daemon` passes with 74 tests.
 
+## 2026-06-24 — Postman billing-service collection
+
+- Added root Postman collection and local environment for billing-service: `EcoVolt-Billing.postman_collection.json` and `EcoVolt-Billing.postman_environment.json`.
+- Covered customer, meter, reading, invoice, tariff detail/deactivation, customer-scoped meter/invoice, pagination, lifecycle, validation, missing entity, duplicate meter, duplicate-customer feasibility, and optimistic-lock feasibility scenarios.
+- Added end-to-end workflow from customer creation through paid invoice verification and embedded Newman CI command.
+
 - Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
 - Created root and service README files for workspace navigation and local service entry points.
 - Updated initialization workflow state to COMPLETE after Phase 8 verification.

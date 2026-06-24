@@ -1,0 +1,651 @@
+{
+  "info": {
+    "_postman_id": "a64ebf25-7d8d-45f8-9af7-ecovolt-billing",
+    "name": "EcoVolt Billing",
+    "description": "Comprehensive API collection for billing-service. Includes domain CRUD/read APIs, end-to-end billing workflow, negative tests, and CI Newman command.\n\nNewman CI command:\nnewman run EcoVolt-Billing.postman_collection.json -e EcoVolt-Billing.postman_environment.json --bail --reporters cli,junit --reporter-junit-export build/newman/ecovolt-billing-results.xml",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "customerId", "value": "" },
+    { "key": "meterId", "value": "" },
+    { "key": "readingId", "value": "" },
+    { "key": "invoiceId", "value": "" },
+    { "key": "tariffId", "value": "" },
+    { "key": "tariffVersion", "value": "" },
+    { "key": "runId", "value": "" },
+    { "key": "duplicateMeterNumber", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('runId')) {",
+          "  pm.collectionVariables.set('runId', Date.now().toString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Customer",
+      "item": [
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Customer {{$timestamp}}\",\n  \"email\": \"postman.customer.{{runId}}@ecovolt.test\",\n  \"phone\": \"+15550001001\",\n  \"address\": \"100 Workflow Avenue\"\n}"
+            },
+            "url": "{{baseUrl}}/api/customers"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Customer schema is valid', () => pm.response.to.have.jsonSchema({type:'object',required:['id','customerNumber','name','email','status','createdAt','updatedAt'],properties:{id:{type:'number'},customerNumber:{type:'string'},name:{type:'string'},email:{type:'string'},phone:{type:['string','null']},address:{type:['string','null']},status:{type:'string'},createdAt:{type:'string'},updatedAt:{type:'string'}}}));",
+                  "pm.test('Business rule: new customers are ACTIVE', () => pm.expect(json.status).to.eql('ACTIVE'));",
+                  "pm.test('Business rule: customer number is generated', () => pm.expect(json.customerNumber).to.match(/^CUST-[A-Z0-9-]+/));",
+                  "pm.collectionVariables.set('customerId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Customer",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/customers/{{customerId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Customer response schema is valid', () => pm.response.to.have.jsonSchema({type:'object',required:['id','customerNumber','name','email','status'],properties:{id:{type:'number'},customerNumber:{type:'string'},name:{type:'string'},email:{type:'string'},status:{enum:['ACTIVE','INACTIVE']}}}));",
+                  "pm.test('Returned customer matches stored customerId', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('customerId'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Customers",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/customers?page=0&size=20&sort=id,asc" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Page schema is valid', () => pm.response.to.have.jsonSchema({type:'object',required:['content','pageable','totalElements','totalPages','size','number'],properties:{content:{type:'array'},totalElements:{type:'number'},totalPages:{type:'number'},size:{type:'number'},number:{type:'number'}}}));",
+                  "pm.test('Pagination request page and size are honored', () => { pm.expect(json.number).to.eql(0); pm.expect(json.size).to.eql(20); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Postman Customer {{$timestamp}}\",\n  \"email\": \"postman.customer.updated.{{runId}}@ecovolt.test\",\n  \"phone\": \"+15550001002\",\n  \"address\": \"200 Workflow Avenue\"\n}"
+            },
+            "url": "{{baseUrl}}/api/customers/{{customerId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Updated customer keeps same id', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('customerId'))));",
+                  "pm.test('Business rule: update does not deactivate customer', () => pm.expect(json.status).to.eql('ACTIVE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate Customer",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/customers/{{customerId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204 No Content', () => pm.response.to.have.status(204));",
+                  "pm.test('No response body is returned', () => pm.expect(pm.response.text()).to.eql(''));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Meter",
+      "item": [
+        {
+          "name": "Register Meter",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{customerId}},\n  \"meterNumber\": \"MTR-PM-{{runId}}\",\n  \"installationDate\": \"2024-01-01\",\n  \"tariffType\": \"RESIDENTIAL\"\n}"
+            },
+            "url": "{{baseUrl}}/api/meters"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Meter schema is valid', () => pm.response.to.have.jsonSchema({type:'object',required:['id','meterNumber','installationDate','status','tariffType','customerId'],properties:{id:{type:'number'},meterNumber:{type:'string'},installationDate:{type:'string'},status:{type:'string'},tariffType:{type:'string'},customerId:{type:'number'}}}));",
+                  "pm.test('Business rule: new meters are ACTIVE', () => pm.expect(json.status).to.eql('ACTIVE'));",
+                  "pm.test('Meter is assigned to stored customer', () => pm.expect(json.customerId).to.eql(Number(pm.collectionVariables.get('customerId'))));",
+                  "pm.collectionVariables.set('meterId', json.id);",
+                  "pm.collectionVariables.set('duplicateMeterNumber', json.meterNumber);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Meter",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/meters/{{meterId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Returned meter matches stored meterId', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('meterId'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Meters",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/meters?page=0&size=20&sort=id,asc" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Pagination metadata exists', () => { pm.expect(json).to.have.property('content'); pm.expect(json).to.have.property('totalElements'); pm.expect(json).to.have.property('size'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Customer Meters",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/customers/{{customerId}}/meters?page=0&size=20&sort=id,asc" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Scoped meters page schema is valid', () => pm.expect(json.content).to.be.an('array'));",
+                  "pm.test('Scoped meters belong to stored customer', () => json.content.forEach(m => pm.expect(m.customerId).to.eql(Number(pm.collectionVariables.get('customerId')))));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reading",
+      "item": [
+        {
+          "name": "Create Reading - Previous",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-03-01\",\n  \"readingValue\": 100.00\n}"
+            },
+            "url": "{{baseUrl}}/api/readings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Reading schema is valid', () => pm.response.to.have.jsonSchema({type:'object',required:['id','meterId','readingDate','readingValue'],properties:{id:{type:'number'},meterId:{type:'number'},readingDate:{type:'string'},readingValue:{type:'number'}}}));",
+                  "pm.test('Business rule: reading belongs to stored meter', () => pm.expect(json.meterId).to.eql(Number(pm.collectionVariables.get('meterId'))));",
+                  "pm.collectionVariables.set('readingId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Reading - Current",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-04-01\",\n  \"readingValue\": 160.00\n}"
+            },
+            "url": "{{baseUrl}}/api/readings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Reading is chronological current value', () => pm.expect(json.readingValue).to.eql(160));",
+                  "pm.collectionVariables.set('readingId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Reading",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-05-01\",\n  \"readingValue\": 180.00\n}"
+            },
+            "url": "{{baseUrl}}/api/readings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Stores latest reading id', () => pm.collectionVariables.set('readingId', json.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Readings",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/readings?page=0&size=20&sort=id,asc" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Pagination metadata exists', () => { pm.expect(json.content).to.be.an('array'); pm.expect(json.size).to.eql(20); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invoice",
+      "item": [
+        {
+          "name": "Generate Invoice",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/invoices/generate/{{customerId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Generate returns invoice array', () => pm.expect(json).to.be.an('array').that.is.not.empty);",
+                  "const invoice = json[0];",
+                  "pm.test('Invoice schema is valid', () => pm.expect(invoice).to.include.keys(['id','invoiceNumber','customerId','previousReadingId','currentReadingId','unitsConsumed','amount','generatedDate','status']));",
+                  "pm.test('Business rule: generated invoice is GENERATED', () => pm.expect(invoice.status).to.eql('GENERATED'));",
+                  "pm.test('Business rule: consumption is positive', () => pm.expect(invoice.unitsConsumed).to.be.above(0));",
+                  "pm.collectionVariables.set('invoiceId', invoice.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Invoice",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/invoices/{{invoiceId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Returned invoice matches stored invoiceId', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('invoiceId'))));",
+                  "pm.test('Invoice belongs to stored customer', () => pm.expect(json.customerId).to.eql(Number(pm.collectionVariables.get('customerId'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Invoices",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/invoices?page=0&size=20&sort=id,asc" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Pagination metadata exists', () => { pm.expect(json.content).to.be.an('array'); pm.expect(json.totalElements).to.be.a('number'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer Invoices",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/customers/{{customerId}}/invoices?page=0&size=20&sort=id,asc" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Scoped invoices page schema is valid', () => pm.expect(json.content).to.be.an('array'));",
+                  "pm.test('Scoped invoices belong to stored customer', () => json.content.forEach(i => pm.expect(i.customerId).to.eql(Number(pm.collectionVariables.get('customerId')))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay Invoice",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/invoices/{{invoiceId}}/pay" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Lifecycle transition: invoice becomes PAID', () => pm.expect(json.status).to.eql('PAID'));",
+                  "pm.test('Paid invoice keeps same id', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('invoiceId'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Reading For Cancel Scenario",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-06-01\",\n  \"readingValue\": 220.00\n}"
+            },
+            "url": "{{baseUrl}}/api/readings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Cancel scenario reading belongs to stored meter', () => pm.expect(json.meterId).to.eql(Number(pm.collectionVariables.get('meterId'))));",
+                  "pm.collectionVariables.set('readingId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate Invoice For Cancel Scenario",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/invoices/generate/{{customerId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Generated cancel-scenario invoice is cancellable', () => pm.expect(json[0].status).to.eql('GENERATED'));",
+                  "pm.collectionVariables.set('invoiceId', json[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel Invoice",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/invoices/{{invoiceId}}/cancel" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Lifecycle transition: invoice becomes CANCELLED', () => pm.expect(json.status).to.eql('CANCELLED'));",
+                  "pm.test('Cancelled invoice keeps same id', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('invoiceId'))));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tariff",
+      "item": [
+        {
+          "name": "Create Tariff",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"RESIDENTIAL\",\n  \"version\": {{tariffVersion}},\n  \"name\": \"Postman Historical Residential {{tariffVersion}}\",\n  \"effectiveFrom\": \"2023-01-01\",\n  \"effectiveTo\": \"2023-12-31\",\n  \"slabs\": [\n    { \"fromUnits\": 0.00, \"toUnits\": 100.00, \"ratePerUnit\": 4.00 },\n    { \"fromUnits\": 100.00, \"toUnits\": null, \"ratePerUnit\": 6.00 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/tariff-plans"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('tariffVersion', Math.floor(Math.random() * 900000) + 10000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Tariff schema is valid', () => pm.expect(json).to.include.keys(['id','type','version','name','effectiveFrom','effectiveTo','active','slabs']));",
+                  "pm.test('Business rule: tariff slabs are returned', () => pm.expect(json.slabs).to.be.an('array').that.is.not.empty);",
+                  "pm.test('Business rule: created tariff uses requested version', () => pm.expect(json.version).to.eql(Number(pm.collectionVariables.get('tariffVersion'))));",
+                  "pm.collectionVariables.set('tariffId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Tariff",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/tariff-plans/{{tariffId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Returned tariff matches stored tariffId', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('tariffId'))));",
+                  "pm.test('Tariff detail includes slabs', () => pm.expect(json.slabs).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate Tariff",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/tariff-plans/{{tariffId}}/deactivate?effectiveTo=2023-12-31" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Lifecycle transition: tariff becomes inactive', () => pm.expect(json.active).to.eql(false));",
+                  "pm.test('Deactivated historical tariff keeps same id', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('tariffId'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Tariffs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/tariff-plans?page=0&size=20&sort=id,asc" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Pagination metadata exists', () => { pm.expect(json.content).to.be.an('array'); pm.expect(json.number).to.eql(0); });",
+                  "if (!pm.collectionVariables.get('tariffId') && json.content.length) { pm.collectionVariables.set('tariffId', json.content[0].id); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "End-to-End Workflow",
+      "description": "Run the domain folders in order or run this folder after environment reset: Create Customer -> Create Meter -> Create Readings -> Generate Invoice -> Get Invoice -> Pay Invoice -> Verify PAID.",
+      "item": [
+        { "name": "01 Create Customer", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"E2E Customer {{runId}}\",\n  \"email\": \"e2e.customer.{{runId}}@ecovolt.test\",\n  \"phone\": \"+15550002001\",\n  \"address\": \"1 E2E Way\"\n}" }, "url": "{{baseUrl}}/api/customers" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "pm.test('E2E customer is ACTIVE', () => pm.expect(json.status).to.eql('ACTIVE'));", "pm.collectionVariables.set('customerId', json.id);"] } }] },
+        { "name": "02 Create Meter", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"customerId\": {{customerId}},\n  \"meterNumber\": \"MTR-E2E-{{runId}}\",\n  \"installationDate\": \"2024-01-01\",\n  \"tariffType\": \"RESIDENTIAL\"\n}" }, "url": "{{baseUrl}}/api/meters" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "pm.test('E2E meter belongs to customer', () => pm.expect(json.customerId).to.eql(Number(pm.collectionVariables.get('customerId'))));", "pm.collectionVariables.set('meterId', json.id);"] } }] },
+        { "name": "03 Create Previous Reading", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-06-01\",\n  \"readingValue\": 200.00\n}" }, "url": "{{baseUrl}}/api/readings" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "pm.collectionVariables.set('readingId', json.id);"] } }] },
+        { "name": "04 Create Current Reading", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-07-01\",\n  \"readingValue\": 260.00\n}" }, "url": "{{baseUrl}}/api/readings" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "pm.collectionVariables.set('readingId', json.id);"] } }] },
+        { "name": "05 Generate Invoice", "request": { "method": "POST", "url": "{{baseUrl}}/api/invoices/generate/{{customerId}}" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 201 Created', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "pm.test('E2E invoice generated', () => pm.expect(json).to.be.an('array').that.is.not.empty);", "pm.collectionVariables.set('invoiceId', json[0].id);", "pm.test('Generated status is correct', () => pm.expect(json[0].status).to.eql('GENERATED'));"] } }] },
+        { "name": "06 Get Invoice", "request": { "method": "GET", "url": "{{baseUrl}}/api/invoices/{{invoiceId}}" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));", "const json = pm.response.json();", "pm.test('E2E get invoice matches id', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('invoiceId'))));"] } }] },
+        { "name": "07 Pay Invoice", "request": { "method": "POST", "url": "{{baseUrl}}/api/invoices/{{invoiceId}}/pay" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200 OK', () => pm.response.to.have.status(200));", "const json = pm.response.json();", "pm.test('Verify Status = PAID', () => pm.expect(json.status).to.eql('PAID'));"] } }] }
+      ]
+    },
+    {
+      "name": "Negative Tests",
+      "item": [
+        {
+          "name": "Duplicate Customer - Current API Feasibility",
+          "description": "The public Customer API does not accept customerNumber and does not enforce unique email, so deterministic duplicate-customer rejection is not feasible. This request documents current behavior with a duplicate email.",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Duplicate Email Customer\",\n  \"email\": \"postman.customer.updated.{{runId}}@ecovolt.test\",\n  \"phone\": \"+15550001003\",\n  \"address\": \"Duplicate feasibility\"\n}" },
+            "url": "{{baseUrl}}/api/customers"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Current behavior: duplicate email is accepted because customerNumber is server-generated', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "pm.test('Feasibility note: this is not a true duplicate-customer error path', () => pm.expect(json.customerNumber).to.match(/^CUST-/));"] } }]
+        },
+        {
+          "name": "Duplicate Meter",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": {{customerId}},\n  \"meterNumber\": \"{{duplicateMeterNumber}}\",\n  \"installationDate\": \"2024-01-01\",\n  \"tariffType\": \"RESIDENTIAL\"\n}" },
+            "url": "{{baseUrl}}/api/meters"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422 Unprocessable Entity', () => pm.response.to.have.status(422));", "const json = pm.response.json();", "pm.test('Duplicate meter returns ApiError', () => pm.expect(json).to.include.keys(['status','error','message','path']));", "pm.test('Business rule: meter number already exists', () => pm.expect(json.message).to.include('Meter number already exists'));"] } }]
+        },
+        {
+          "name": "Invalid Invoice Transition",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/invoices/{{invoiceId}}/pay" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422 for terminal invoice', () => pm.response.to.have.status(422));", "const json = pm.response.json();", "pm.test('Lifecycle transition validation error is structured', () => pm.expect(json.status).to.eql(422));"] } }]
+        },
+        {
+          "name": "Missing Entity 404",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/customers/999999999" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 404 Not Found', () => pm.response.to.have.status(404));", "const json = pm.response.json();", "pm.test('404 ApiError schema is valid', () => pm.expect(json).to.include.keys(['timestamp','status','error','message','path']));", "pm.test('Missing entity error identifies Customer', () => pm.expect(json.message).to.include('Customer'));"] } }]
+        },
+        {
+          "name": "Validation Errors 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"email\": \"not-an-email\",\n  \"phone\": \"x\",\n  \"address\": \"Validation test\"\n}" },
+            "url": "{{baseUrl}}/api/customers"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 400 Bad Request', () => pm.response.to.have.status(400));", "const json = pm.response.json();", "pm.test('Validation ApiError contains fieldErrors', () => { pm.expect(json.status).to.eql(400); pm.expect(json.fieldErrors).to.be.an('object'); });", "pm.test('Validation errors include name and email', () => { pm.expect(json.fieldErrors).to.have.property('name'); pm.expect(json.fieldErrors).to.have.property('email'); });"] } }]
+        },
+        {
+          "name": "Optimistic Lock Conflict - Feasibility Note",
+          "description": "Optimistic locking is implemented server-side and mapped to 409, but public REST DTOs do not expose opt_lock/version fields, so a deterministic stale-write conflict cannot be triggered from this collection without a test-only probe endpoint or direct database access.",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/customers/{{customerId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200 OK feasibility probe', () => pm.response.to.have.status(200));", "pm.test('Optimistic lock conflict is not publicly reproducible through current DTO contract', () => pm.expect(true).to.eql(true));"] } }]
+        }
+      ]
+    }
+  ]
+}
