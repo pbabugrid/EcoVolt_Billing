@@ -3,10 +3,16 @@ package com.ecovolt.billing.customer;
 
 import com.ecovolt.billing.customer.dto.CustomerRequest;
 import com.ecovolt.billing.customer.dto.CustomerResponse;
+import com.ecovolt.billing.invoice.dto.InvoiceResponse;
+import com.ecovolt.billing.meter.dto.MeterResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,8 +23,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/customers")
@@ -35,15 +39,31 @@ public class CustomerController {
     }
 
     @GetMapping
-    @Operation(summary = "List all customers")
-    public List<CustomerResponse> findAll() {
-        return customerService.findAll();
+    @Operation(summary = "List customers with pagination")
+    public Page<CustomerResponse> findAll(@PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        return customerService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get a customer by id")
     public CustomerResponse findById(@PathVariable Long id) {
         return customerService.findById(id);
+    }
+
+    @GetMapping("/{id}/invoices")
+    @Operation(summary = "List invoices for a customer with pagination")
+    public Page<InvoiceResponse> findInvoices(
+            @PathVariable Long id,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        return customerService.findInvoices(id, pageable);
+    }
+
+    @GetMapping("/{id}/meters")
+    @Operation(summary = "List meters for a customer with pagination")
+    public Page<MeterResponse> findMeters(
+            @PathVariable Long id,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        return customerService.findMeters(id, pageable);
     }
 
     @PutMapping("/{id}")

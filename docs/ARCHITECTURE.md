@@ -12,7 +12,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 
 ## Runtime Architecture
 
-- Application entry point: `BillingServiceApplication`.
+- Application entry point: `BillingServiceApplication` with JPA auditing enabled.
 - Runtime framework: Spring Boot Web MVC with embedded server defaults.
 - API documentation: springdoc OpenAPI / Swagger UI configured by `OpenApiConfig`.
 - Persistence: Spring Data JPA / Hibernate against an H2 in-memory database for local development and tests.
@@ -20,7 +20,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 
 ## Module Architecture
 
-- `common`: shared `BaseEntity` audit fields for creation and update timestamps.
+- `common`: shared `BaseEntity` audit fields for creation/update timestamps and optimistic lock column.
 - `customer`: customer entity, status enum, repository, service, controller, and DTOs.
 - `meter`: meter entity, status enum, repository, service, controller, and DTOs.
 - `reading`: meter reading entity, repository, service, controller, and DTOs.
@@ -31,12 +31,13 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 
 ## REST API Surface
 
-- `POST /api/customers`, `GET /api/customers`, `GET /api/customers/{id}`, `PUT /api/customers/{id}`, `DELETE /api/customers/{id}`.
-- `POST /api/meters`, `GET /api/meters`.
-- `POST /api/readings`, `GET /api/readings`.
-- `POST /api/invoices/generate/{customerId}`, `GET /api/invoices`, `GET /api/invoices/{id}`, `POST /api/invoices/{id}/pay`, `POST /api/invoices/{id}/cancel`.
-- `POST /api/tariff-plans`, `GET /api/tariff-plans`, `GET /api/tariff-plans/{id}`, `PUT /api/tariff-plans/{id}/deactivate`.
-- Invoice generation returns `201 Created`; customer delete/deactivate returns `204 No Content`; read and invoice lifecycle endpoints return DTOs directly.
+- `POST /api/customers`, `GET /api/customers` (paged), `GET /api/customers/{id}`, `GET /api/customers/{id}/invoices` (paged), `GET /api/customers/{id}/meters` (paged), `PUT /api/customers/{id}`, `DELETE /api/customers/{id}`.
+- `POST /api/meters`, `GET /api/meters` (paged), `GET /api/meters/{id}`.
+- `POST /api/readings`, `GET /api/readings` (paged).
+- `POST /api/invoices/generate/{customerId}`, `GET /api/invoices` (paged), `GET /api/invoices/{id}`, `POST /api/invoices/{id}/pay`, `POST /api/invoices/{id}/cancel`.
+- `POST /api/tariff-plans`, `GET /api/tariff-plans` (paged), `GET /api/tariff-plans/{id}`, `PUT /api/tariff-plans/{id}/deactivate`.
+- Pageable endpoints default to page 0, size 20, sorted by `id ASC` unless request parameters override them.
+- Invoice generation returns `201 Created`; customer delete/deactivate returns `204 No Content`; detail and invoice lifecycle endpoints return DTOs directly.
 
 ## Domain Relationships
 
@@ -51,7 +52,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 
 - JPA entities use generated numeric primary keys.
 - Business uniqueness is enforced for customer number, meter number, invoice number, meter/date reading pairs, and invoice source-reading pairs.
-- Entities extend `BaseEntity` for audit timestamps.
+- Entities extend `BaseEntity` for audit timestamps and `opt_lock` optimistic locking, except `TariffSlab`, which owns only a direct `opt_lock` version field.
 - Relationships are lazy-loaded; child collections use cascade behavior where modeled.
 - Schema evolution uses Flyway SQL migrations; Hibernate validates the schema at runtime.
 
@@ -74,12 +75,14 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - Missing resources throw `ResourceNotFoundException` and map to HTTP 404.
 - Business-rule violations throw `BillingException` and map to HTTP 422.
 - request validation failures map to HTTP 400 with field-level errors.
+- Data integrity and optimistic locking conflicts map to HTTP 409 with structured `ApiError` payloads.
 - Unexpected exceptions map to HTTP 500 with a generic message.
 - Error responses use the shared `ApiError` record.
+- Services and the global exception handler emit structured SLF4J logs for lifecycle events, conflicts, and unexpected failures.
 
 ## Testing Architecture
 
-- Testing Architecture: test coverage includes a context smoke test, unit tests for invoice generation and reading validation rules, tariff service/controller integration tests, and integration tests for customer retention, invoice lifecycle transitions, multi-meter invoice generation, duplicate replay, active-tariff calculation, and REST response/error mapping — all running against H2 in-memory.
+- Testing Architecture: test coverage includes a context smoke test, unit tests for invoice generation and reading validation rules, tariff service/controller integration tests, and integration tests for customer retention, invoice lifecycle transitions, multi-meter invoice generation, duplicate replay, active-tariff calculation, reliability hardening, pageable/scoped APIs, and REST response/error mapping — all running against H2 in-memory.
 
 ## Build Architecture
 

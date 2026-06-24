@@ -8,7 +8,8 @@ All REST controllers share a consistent declaration style:
 - `@Tag(name, description)` (springdoc) at class level for OpenAPI grouping
 - `@Operation(summary)` on every handler method
 - POST handlers return `ResponseEntity<T>` with `HttpStatus.CREATED`
-- GET handlers return `T` or `List<T>` directly (Spring auto-wraps with 200)
+- Detail GET handlers return `T` directly; list GET handlers return `Page<T>` with `Pageable`
+- Pageable endpoints use `@PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC)` unless a different domain order is required
 - `@Valid @RequestBody` used on all mutating endpoints
 
 ## When to use
@@ -34,9 +35,10 @@ public class {Domain}Controller {
     }
 
     @GetMapping
-    @Operation(summary = "List all {domain}s")
-    public List<{Domain}Response> findAll() {
-        return {domain}Service.findAll();
+    @Operation(summary = "List {domain}s with pagination")
+    public Page<{Domain}Response> findAll(
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        return {domain}Service.findAll(pageable);
     }
 
     @GetMapping("/{id}")
@@ -63,7 +65,8 @@ public class {Domain}Controller {
 
 ## Evidence
 
-- `billing-service/src/main/java/com/ecovolt/billing/customer/CustomerController.java` (full CRUD, lines 23-61)
-- `billing-service/src/main/java/com/ecovolt/billing/meter/MeterController.java` (POST + GET, lines 19-38)
-- `billing-service/src/main/java/com/ecovolt/billing/reading/MeterReadingController.java` (POST + GET, lines 20-39)
-- `billing-service/src/main/java/com/ecovolt/billing/invoice/InvoiceController.java` (custom POST + two GETs, lines 17-44)
+- `billing-service/src/main/java/com/ecovolt/billing/customer/CustomerController.java`
+- `billing-service/src/main/java/com/ecovolt/billing/meter/MeterController.java`
+- `billing-service/src/main/java/com/ecovolt/billing/reading/MeterReadingController.java`
+- `billing-service/src/main/java/com/ecovolt/billing/invoice/InvoiceController.java`
+- `billing-service/src/main/java/com/ecovolt/billing/tariff/TariffController.java`

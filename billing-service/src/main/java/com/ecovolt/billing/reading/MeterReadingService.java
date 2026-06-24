@@ -7,13 +7,15 @@ import com.ecovolt.billing.meter.MeterService;
 import com.ecovolt.billing.reading.dto.MeterReadingRequest;
 import com.ecovolt.billing.reading.dto.MeterReadingResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MeterReadingService {
 
     private final MeterReadingRepository meterReadingRepository;
@@ -51,13 +53,14 @@ public class MeterReadingService {
                 .readingDate(request.readingDate())
                 .readingValue(request.readingValue())
                 .build();
-        return MeterReadingResponse.from(meterReadingRepository.save(reading));
+        MeterReading saved = meterReadingRepository.save(reading);
+        log.info("event=meter_reading_created readingId={} meterId={} readingDate={}",
+                saved.getId(), meter.getId(), saved.getReadingDate());
+        return MeterReadingResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<MeterReadingResponse> findAll() {
-        return meterReadingRepository.findAll().stream()
-                .map(MeterReadingResponse::from)
-                .toList();
+    public Page<MeterReadingResponse> findAll(Pageable pageable) {
+        return meterReadingRepository.findAll(pageable).map(MeterReadingResponse::from);
     }
 }

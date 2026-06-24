@@ -43,6 +43,16 @@ Style: concise, grep-friendly, and non-duplicative.
 - **Tests added**: `CustomerRetentionIntegrationTest` for invoice-preserving customer deactivation and `InvoiceLifecycleIntegrationTest` for service/API lifecycle transitions.
 - **Validation**: Gradle `test --rerun-tasks` passes.
 
+## 2026-06-24 — P2 reliability hardening
+
+- Added JPA auditing activation and optimistic locking via `opt_lock` version fields plus Flyway `V3__add_optimistic_locking.sql`.
+- Added HTTP 409 handling for data integrity violations and optimistic locking conflicts using the shared `ApiError` shape.
+- Added structured SLF4J lifecycle/conflict/error logging in services and global exception handling.
+- Converted customer, meter, reading, invoice, and tariff list APIs to pageable responses with default page size 20 and `id ASC` ordering.
+- Added customer-scoped invoice and meter APIs plus meter detail API; invoice detail API remains available.
+- Added reliability integration coverage for auditing, optimistic locking, conflict handlers, pageable responses, customer-scoped APIs, meter detail, and invoice detail.
+- Validation: Gradle `test --no-daemon` passes.
+
 - Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
 - Created root and service README files for workspace navigation and local service entry points.
 - Updated initialization workflow state to COMPLETE after Phase 8 verification.

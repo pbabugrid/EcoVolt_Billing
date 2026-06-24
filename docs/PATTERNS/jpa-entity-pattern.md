@@ -3,7 +3,7 @@
 ## Description
 
 All persistent entities:
-1. Extend `BaseEntity` to inherit `createdAt` / `updatedAt` audit fields (populated via JPA Auditing).
+1. Extend `BaseEntity` to inherit `createdAt` / `updatedAt` audit fields (populated via JPA Auditing) and `opt_lock` optimistic locking.
 2. Carry a full Lombok annotation stack: `@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder`.
 3. Declare `@Id @GeneratedValue(strategy = GenerationType.IDENTITY)` with `Long` PK.
 4. Define the table name and all named unique-constraint names explicitly in `@Table`.
@@ -14,10 +14,11 @@ All persistent entities:
 `BaseEntity` itself is `@MappedSuperclass` with `@EntityListeners(AuditingEntityListener.class)`:
 - `createdAt` — `@CreatedDate @Column(updatable = false)`
 - `updatedAt` — `@LastModifiedDate`
+- `optLock` — `@Version @Column(name = "opt_lock")`
 
 ## When to use
 
-Every new persistent domain object. Extend `BaseEntity`; do not duplicate audit fields.
+Every new persistent domain object. Extend `BaseEntity`; do not duplicate audit/version fields unless the entity intentionally excludes audit timestamps, such as tariff slabs.
 
 ## Template
 

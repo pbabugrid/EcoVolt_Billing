@@ -3,6 +3,7 @@ package com.ecovolt.billing.common;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
@@ -28,4 +29,8 @@ public abstract class BaseEntity {
     @LastModifiedDate
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Version
+    @Column(name = "opt_lock", nullable = false)
+    private Long optLock;
 }

@@ -8,13 +8,15 @@ import com.ecovolt.billing.meter.dto.MeterRequest;
 import com.ecovolt.billing.meter.dto.MeterResponse;
 import com.ecovolt.billing.tariff.TariffType;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MeterService {
 
     private final MeterRepository meterRepository;
@@ -33,14 +35,20 @@ public class MeterService {
                 .tariffType(request.tariffType() == null ? TariffType.RESIDENTIAL : request.tariffType())
                 .customer(customer)
                 .build();
-        return MeterResponse.from(meterRepository.save(meter));
+        Meter saved = meterRepository.save(meter);
+        log.info("event=meter_created meterId={} meterNumber={} customerId={}",
+                saved.getId(), saved.getMeterNumber(), customer.getId());
+        return MeterResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<MeterResponse> findAll() {
-        return meterRepository.findAll().stream()
-                .map(MeterResponse::from)
-                .toList();
+    public Page<MeterResponse> findAll(Pageable pageable) {
+        return meterRepository.findAll(pageable).map(MeterResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public MeterResponse findById(Long id) {
+        return MeterResponse.from(getMeterOrThrow(id));
     }
 
     @Transactional(readOnly = true)

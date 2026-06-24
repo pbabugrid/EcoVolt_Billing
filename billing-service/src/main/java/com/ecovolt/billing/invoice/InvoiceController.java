@@ -4,6 +4,10 @@ import com.ecovolt.billing.invoice.dto.InvoiceResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,9 +35,9 @@ public class InvoiceController {
     }
 
     @GetMapping
-    @Operation(summary = "List all invoices")
-    public List<InvoiceResponse> findAll() {
-        return invoiceService.findAll();
+    @Operation(summary = "List invoices with pagination")
+    public Page<InvoiceResponse> findAll(@PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        return invoiceService.findAll(pageable);
     }
 
     @GetMapping("/{id}")

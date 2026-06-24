@@ -32,9 +32,11 @@ class TariffControllerIntegrationTest {
     void findAll_returnsSeededPlans() throws Exception {
         mockMvc.perform(get("/api/tariff-plans"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(3))))
-                .andExpect(jsonPath("$[0].type").exists())
-                .andExpect(jsonPath("$[0].slabs").isArray());
+                .andExpect(jsonPath("$.content", hasSize(greaterThanOrEqualTo(3))))
+                .andExpect(jsonPath("$.content[0].type").exists())
+                .andExpect(jsonPath("$.content[0].slabs").isArray())
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements", greaterThanOrEqualTo(3)));
     }
 
     @Test

@@ -137,11 +137,11 @@ Files: `application.yaml`
 
 Config categories: `spring.application`, `spring.datasource` (H2 in-memory), `spring.h2.console`, `spring.jpa` (ddl-auto, show-sql)
 
-#### /billing-service/src/main/resources/db/migration — 2 files — Flyway migrations
+#### /billing-service/src/main/resources/db/migration — 3 files — Flyway migrations
 
-Files: `V1__baseline_billing_schema.sql`, `V2__seed_default_tariff_plans.sql`
+Files: `V1__baseline_billing_schema.sql`, `V2__seed_default_tariff_plans.sql`, `V3__add_optimistic_locking.sql`
 
-### /billing-service/src/test/java/com/ecovolt/billing — 8 files — automated tests
+### /billing-service/src/test/java/com/ecovolt/billing — 9 files — automated tests
 
 Files: `BillingServiceApplicationTests.java`
 
@@ -156,6 +156,10 @@ Files: `InvoiceGenerationIntegrationTest.java`, `InvoiceGenerationServiceTest.ja
 #### …/reading — 1 file
 
 Files: `MeterReadingServiceTest.java`
+
+#### …/reliability — 1 file
+
+Files: `ReliabilityHardeningIntegrationTest.java`
 
 #### …/tariff — 2 files
 

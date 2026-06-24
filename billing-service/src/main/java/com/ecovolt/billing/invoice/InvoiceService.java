@@ -4,25 +4,25 @@ import com.ecovolt.billing.exception.BillingException;
 import com.ecovolt.billing.exception.ResourceNotFoundException;
 import com.ecovolt.billing.invoice.dto.InvoiceResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 /**
  * Read-side queries for invoices. Generation lives in {@link InvoiceGenerationService}.
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
 
     @Transactional(readOnly = true)
-    public List<InvoiceResponse> findAll() {
-        return invoiceRepository.findAll().stream()
-                .map(InvoiceResponse::from)
-                .toList();
+    public Page<InvoiceResponse> findAll(Pageable pageable) {
+        return invoiceRepository.findAll(pageable).map(InvoiceResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -34,6 +34,7 @@ public class InvoiceService {
     public InvoiceResponse pay(Long id) {
         Invoice invoice = getInvoiceOrThrow(id);
         transition(invoice, InvoiceStatus.PAID);
+        log.info("event=invoice_paid invoiceId={} invoiceNumber={}", invoice.getId(), invoice.getInvoiceNumber());
         return InvoiceResponse.from(invoice);
     }
 
@@ -41,7 +42,13 @@ public class InvoiceService {
     public InvoiceResponse cancel(Long id) {
         Invoice invoice = getInvoiceOrThrow(id);
         transition(invoice, InvoiceStatus.CANCELLED);
+        log.info("event=invoice_cancelled invoiceId={} invoiceNumber={}", invoice.getId(), invoice.getInvoiceNumber());
         return InvoiceResponse.from(invoice);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<InvoiceResponse> findByCustomerId(Long customerId, Pageable pageable) {
+        return invoiceRepository.findByCustomer_Id(customerId, pageable).map(InvoiceResponse::from);
     }
 
     private Invoice getInvoiceOrThrow(Long id) {

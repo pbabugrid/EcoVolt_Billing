@@ -11,6 +11,7 @@ import com.ecovolt.billing.reading.MeterReadingRepository;
 import com.ecovolt.billing.tariff.TariffCalculation;
 import com.ecovolt.billing.tariff.TariffService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InvoiceGenerationService {
 
     private final MeterReadingRepository meterReadingRepository;
@@ -39,6 +41,7 @@ public class InvoiceGenerationService {
     @Transactional
     public List<InvoiceResponse> generateForCustomer(Long customerId) {
         Customer customer = customerService.getCustomerOrThrow(customerId);
+        log.info("event=invoice_generation_started customerId={}", customerId);
 
         List<Meter> meters = meterRepository.findByCustomer_IdOrderByIdAsc(customerId);
 
@@ -93,7 +96,10 @@ public class InvoiceGenerationService {
                     .currentReadingRecord(current)
                     .build();
 
-            created.add(InvoiceResponse.from(invoiceRepository.save(invoice)));
+            Invoice saved = invoiceRepository.save(invoice);
+            log.info("event=invoice_created invoiceId={} invoiceNumber={} customerId={} meterId={}",
+                    saved.getId(), saved.getInvoiceNumber(), customer.getId(), meter.getId());
+            created.add(InvoiceResponse.from(saved));
         }
 
         if (!anyMeterHasTwoReadings) {
@@ -108,6 +114,7 @@ public class InvoiceGenerationService {
                             .formatted(customerId));
         }
 
+        log.info("event=invoice_generation_completed customerId={} invoiceCount={}", customerId, created.size());
         return created;
     }
 

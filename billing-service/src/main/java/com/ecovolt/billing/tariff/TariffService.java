@@ -6,6 +6,9 @@ import com.ecovolt.billing.tariff.dto.TariffPlanRequest;
 import com.ecovolt.billing.tariff.dto.TariffPlanResponse;
 import com.ecovolt.billing.tariff.dto.TariffSlabRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +20,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TariffService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2);
@@ -49,14 +53,15 @@ public class TariffService {
                 .active(true)
                 .build();
         plan.replaceSlabs(toSlabs(request.slabs()));
-        return TariffPlanResponse.from(tariffPlanRepository.save(plan));
+        TariffPlan saved = tariffPlanRepository.save(plan);
+        log.info("event=tariff_plan_created tariffPlanId={} tariffType={} tariffVersion={}",
+                saved.getId(), saved.getType(), saved.getVersion());
+        return TariffPlanResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<TariffPlanResponse> findAll() {
-        return tariffPlanRepository.findAll().stream()
-                .map(TariffPlanResponse::from)
-                .toList();
+    public Page<TariffPlanResponse> findAll(Pageable pageable) {
+        return tariffPlanRepository.findAll(pageable).map(TariffPlanResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -72,6 +77,8 @@ public class TariffService {
         }
         plan.setEffectiveTo(effectiveTo == null ? LocalDate.now() : effectiveTo);
         plan.setActive(false);
+        log.info("event=tariff_plan_deactivated tariffPlanId={} tariffType={} tariffVersion={} effectiveTo={}",
+                plan.getId(), plan.getType(), plan.getVersion(), plan.getEffectiveTo());
         return TariffPlanResponse.from(plan);
     }
 

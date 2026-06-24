@@ -8,10 +8,12 @@ A three-part system handles all error conditions:
    overhead beyond the message:
    - `ResourceNotFoundException` → HTTP 404
    - `BillingException` → HTTP 422 (business rule violation)
+   - `DataIntegrityViolationException` → HTTP 409
+   - optimistic locking failures → HTTP 409
 
 2. **Centralised handler** — `@RestControllerAdvice GlobalExceptionHandler` maps each
    exception type to `ApiError` + `ResponseEntity` with the correct HTTP status.
-   A catch-all `Exception` handler returns 500 for unexpected errors.
+   A catch-all `Exception` handler logs and returns 500 for unexpected errors.
 
 3. **Uniform error payload** — `ApiError` is a `record` with:
    `timestamp, status, error, message, path, fieldErrors (nullable)`.
@@ -24,6 +26,8 @@ A three-part system handles all error conditions:
   lookup that must return a single entity.
 - Throw `BillingException(message)` when a domain/business invariant is violated
   (duplicate key, insufficient data, constraint breach).
+- Let database constraint and optimistic-lock exceptions bubble to `GlobalExceptionHandler`
+  when the persistence layer is the source of truth.
 - Do NOT add new `@ExceptionHandler` methods to `GlobalExceptionHandler` for cases
   already covered by the existing hierarchy — prefer a new subclass of `BillingException`.
 

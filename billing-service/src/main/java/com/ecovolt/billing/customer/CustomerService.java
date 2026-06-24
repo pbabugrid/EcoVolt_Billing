@@ -4,18 +4,27 @@ package com.ecovolt.billing.customer;
 import com.ecovolt.billing.customer.dto.CustomerRequest;
 import com.ecovolt.billing.customer.dto.CustomerResponse;
 import com.ecovolt.billing.exception.ResourceNotFoundException;
+import com.ecovolt.billing.invoice.InvoiceRepository;
+import com.ecovolt.billing.invoice.dto.InvoiceResponse;
+import com.ecovolt.billing.meter.MeterRepository;
+import com.ecovolt.billing.meter.dto.MeterResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final InvoiceRepository invoiceRepository;
+    private final MeterRepository meterRepository;
 
     @Transactional
     public CustomerResponse create(CustomerRequest request) {
@@ -27,14 +36,14 @@ public class CustomerService {
                 .address(request.address())
                 .status(CustomerStatus.ACTIVE)
                 .build();
-        return CustomerResponse.from(customerRepository.save(customer));
+        Customer saved = customerRepository.save(customer);
+        log.info("event=customer_created customerId={} customerNumber={}", saved.getId(), saved.getCustomerNumber());
+        return CustomerResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<CustomerResponse> findAll() {
-        return customerRepository.findAll().stream()
-                .map(CustomerResponse::from)
-                .toList();
+    public Page<CustomerResponse> findAll(Pageable pageable) {
+        return customerRepository.findAll(pageable).map(CustomerResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +58,7 @@ public class CustomerService {
         customer.setEmail(request.email());
         customer.setPhone(request.phone());
         customer.setAddress(request.address());
-        // Managed entity: changes are flushed on transaction commit (dirty checking).
+        log.info("event=customer_updated customerId={} customerNumber={}", customer.getId(), customer.getCustomerNumber());
         return CustomerResponse.from(customer);
     }
 
@@ -57,6 +66,19 @@ public class CustomerService {
     public void delete(Long id) {
         Customer customer = getCustomerOrThrow(id);
         customer.setStatus(CustomerStatus.INACTIVE);
+        log.info("event=customer_deactivated customerId={} customerNumber={}", customer.getId(), customer.getCustomerNumber());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<InvoiceResponse> findInvoices(Long customerId, Pageable pageable) {
+        getCustomerOrThrow(customerId);
+        return invoiceRepository.findByCustomer_Id(customerId, pageable).map(InvoiceResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MeterResponse> findMeters(Long customerId, Pageable pageable) {
+        getCustomerOrThrow(customerId);
+        return meterRepository.findByCustomer_Id(customerId, pageable).map(MeterResponse::from);
     }
 
     /**
