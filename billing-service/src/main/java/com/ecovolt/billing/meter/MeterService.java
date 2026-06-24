@@ -2,6 +2,7 @@ package com.ecovolt.billing.meter;
 
 import com.ecovolt.billing.customer.Customer;
 import com.ecovolt.billing.customer.CustomerService;
+import com.ecovolt.billing.common.PageableSanitizer;
 import com.ecovolt.billing.exception.BillingException;
 import com.ecovolt.billing.exception.ResourceNotFoundException;
 import com.ecovolt.billing.meter.dto.MeterRequest;
@@ -43,7 +44,7 @@ public class MeterService {
 
     @Transactional(readOnly = true)
     public Page<MeterResponse> findAll(Pageable pageable) {
-        return meterRepository.findAll(pageable).map(MeterResponse::from);
+        return meterRepository.findAll(PageableSanitizer.withDefaultSort(pageable)).map(MeterResponse::from);
     }
 
     @Transactional(readOnly = true)

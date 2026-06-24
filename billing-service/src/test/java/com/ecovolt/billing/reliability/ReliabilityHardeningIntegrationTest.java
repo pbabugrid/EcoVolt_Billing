@@ -22,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -53,6 +54,7 @@ class ReliabilityHardeningIntegrationTest {
     @Autowired EntityManagerFactory entityManagerFactory;
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired MockMvc mockMvc;
+    @Autowired JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("JPA auditing populates timestamps automatically")
@@ -267,6 +269,76 @@ class ReliabilityHardeningIntegrationTest {
     }
 
     @Test
+    @DisplayName("Demo seed data reuses V2 tariffs and includes invoices")
+    void demoSeedData_reusesV2TariffsAndIncludesInvoices() {
+        Long historicalTariffs = jdbcTemplate.queryForObject(
+                "select count(*) from tariff_plans where version = 0",
+                Long.class);
+        Long demoInvoices = jdbcTemplate.queryForObject(
+                "select count(*) from invoices where invoice_number like 'INV-DEMO-%'",
+                Long.class);
+        Long invoicesUsingLatestPairs = jdbcTemplate.queryForObject(
+                """
+                        with ranked_readings as (
+                            select mr.id,
+                                   row_number() over (partition by mr.meter_id order by mr.reading_date desc, mr.id desc) as reading_rank
+                            from meter_readings mr
+                        )
+                        select count(*)
+                        from invoices i
+                        join ranked_readings previous_reading
+                          on i.previous_reading_id = previous_reading.id and previous_reading.reading_rank = 2
+                        join ranked_readings current_reading
+                          on i.current_reading_id = current_reading.id and current_reading.reading_rank = 1
+                        where i.invoice_number like 'INV-DEMO-%'
+                        """,
+                Long.class);
+
+        assertThat(historicalTariffs).isZero();
+        assertThat(demoInvoices).isEqualTo(4L);
+        assertThat(invoicesUsingLatestPairs).isZero();
+        assertDemoInvoiceAmount("INV-DEMO-R002-202403", "710.00");
+        assertDemoInvoiceAmount("INV-DEMO-R003-202403", "1130.00");
+        assertDemoInvoiceAmount("INV-DEMO-C002-202405", "3040.00");
+        assertDemoInvoiceAmount("INV-DEMO-I001-202403", "5650.00");
+    }
+
+    @Test
+    @DisplayName("Swagger placeholder sort does not break pageable GET APIs")
+    void pageableApis_ignoreSwaggerPlaceholderSort() throws Exception {
+        TestGraph graph = transactionTemplate().execute(status -> persistGraph("PLACEHOLDER"));
+        String placeholderSort = "[\"string\"]";
+
+        mockMvc.perform(get("/api/customers").param("sort", placeholderSort))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+
+        mockMvc.perform(get("/api/meters").param("sort", placeholderSort))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+
+        mockMvc.perform(get("/api/readings").param("sort", placeholderSort))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+
+        mockMvc.perform(get("/api/invoices").param("sort", placeholderSort))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+
+        mockMvc.perform(get("/api/tariff-plans").param("sort", placeholderSort))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+
+        mockMvc.perform(get("/api/customers/{id}/meters", graph.customerId()).param("sort", placeholderSort))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+
+        mockMvc.perform(get("/api/customers/{id}/invoices", graph.customerId()).param("sort", placeholderSort))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
     @DisplayName("Customer pagination exposes stable sort order and boundary metadata")
     void customerPagination_returnsStableSortOrderAndBoundaryMetadata() throws Exception {
         List<Long> ids = transactionTemplate().execute(status -> List.of(
@@ -362,6 +434,14 @@ class ReliabilityHardeningIntegrationTest {
 
     private TransactionTemplate transactionTemplate() {
         return new TransactionTemplate(transactionManager);
+    }
+
+    private void assertDemoInvoiceAmount(String invoiceNumber, String expectedAmount) {
+        BigDecimal amount = jdbcTemplate.queryForObject(
+                "select amount from invoices where invoice_number = ?",
+                BigDecimal.class,
+                invoiceNumber);
+        assertThat(amount).isEqualByComparingTo(expectedAmount);
     }
 
     private record TestGraph(Long customerId, Long meterId, Long invoiceId) {

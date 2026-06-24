@@ -5,6 +5,7 @@
 Files:
 - `.gitignore`
 - `README.md`
+- `TEST-RESULTS.md`
 - `billing-service.zip` _(archive; repository artifact)_
 - `core-copilot-standalone-2.0.51-2026-06-23.zip` _(archive; Rosetta plugin package)_
 - `gain.json`
@@ -137,17 +138,21 @@ Files: `application.yaml`
 
 Config categories: `spring.application`, `spring.datasource` (H2 in-memory), `spring.h2.console`, `spring.jpa` (ddl-auto, show-sql)
 
-#### /billing-service/src/main/resources/db/migration — 3 files — Flyway migrations
+#### /billing-service/src/main/resources/db/migration — 4 files — Flyway migrations
 
-Files: `V1__baseline_billing_schema.sql`, `V2__seed_default_tariff_plans.sql`, `V3__add_optimistic_locking.sql`
+Files: `V1__baseline_billing_schema.sql`, `V2__seed_default_tariff_plans.sql`, `V3__add_optimistic_locking.sql`, `V4__seed_reference_and_demo_data.sql`
 
-### /billing-service/src/test/java/com/ecovolt/billing — 9 files — automated tests
+### /billing-service/src/test/java/com/ecovolt/billing — 13 files — automated tests
 
 Files: `BillingServiceApplicationTests.java`
 
-#### …/customer — 1 file
+#### …/customer — 2 files
 
-Files: `CustomerRetentionIntegrationTest.java`
+Files: `CustomerMeterStatusGuardIntegrationTest.java`, `CustomerRetentionIntegrationTest.java`
+
+#### …/flyway — 1 file
+
+Files: `FlywayBootstrapIntegrationTest.java`
 
 #### …/invoice — 3 files
 
@@ -164,3 +169,7 @@ Files: `ReliabilityHardeningIntegrationTest.java`
 #### …/tariff — 2 files
 
 Files: `TariffControllerIntegrationTest.java`, `TariffServiceIntegrationTest.java`
+
+#### …/workflow — 1 file
+
+Files: `FullBillingWorkflowIntegrationTest.java`

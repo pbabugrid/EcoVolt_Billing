@@ -3,6 +3,7 @@ package com.ecovolt.billing.customer;
 
 import com.ecovolt.billing.customer.dto.CustomerRequest;
 import com.ecovolt.billing.customer.dto.CustomerResponse;
+import com.ecovolt.billing.common.PageableSanitizer;
 import com.ecovolt.billing.exception.ResourceNotFoundException;
 import com.ecovolt.billing.invoice.InvoiceRepository;
 import com.ecovolt.billing.invoice.dto.InvoiceResponse;
@@ -43,7 +44,7 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public Page<CustomerResponse> findAll(Pageable pageable) {
-        return customerRepository.findAll(pageable).map(CustomerResponse::from);
+        return customerRepository.findAll(PageableSanitizer.withDefaultSort(pageable)).map(CustomerResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -72,13 +73,15 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public Page<InvoiceResponse> findInvoices(Long customerId, Pageable pageable) {
         getCustomerOrThrow(customerId);
-        return invoiceRepository.findByCustomer_Id(customerId, pageable).map(InvoiceResponse::from);
+        return invoiceRepository.findByCustomer_Id(customerId, PageableSanitizer.withDefaultSort(pageable))
+                .map(InvoiceResponse::from);
     }
 
     @Transactional(readOnly = true)
     public Page<MeterResponse> findMeters(Long customerId, Pageable pageable) {
         getCustomerOrThrow(customerId);
-        return meterRepository.findByCustomer_Id(customerId, pageable).map(MeterResponse::from);
+        return meterRepository.findByCustomer_Id(customerId, PageableSanitizer.withDefaultSort(pageable))
+                .map(MeterResponse::from);
     }
 
     /**

@@ -62,6 +62,29 @@ Style: concise, grep-friendly, and non-duplicative.
 - Added current-behavior status guard coverage documenting that invoice generation is currently permissive for inactive customers and non-active meters.
 - Validation: Gradle `test --quiet` passes with 54 tests.
 
+## 2026-06-24 — V4 reference and demo data seed migration
+
+- Added Flyway `V4__seed_reference_and_demo_data.sql` with fictional reference/demo seed data for invoice-generation demos.
+- Reused V2 tariff plans as the single seeded tariff source to avoid duplicate-looking tariff rows.
+- Added seven fictional active customers, one active meter per customer, and chronological increasing readings for each meter.
+- Seeded four generated demo invoices from historical reading pairs while leaving latest reading pairs available for invoice-generation demos.
+- Validation: Gradle `test` passes with 56 tests.
+
+## 2026-06-24 — Pageable GET APIs tolerate Swagger placeholder sort
+
+- Added shared `PageableSanitizer` to replace Swagger/OpenAPI placeholder sort values (`string` / `["string"]`) with the default `id ASC` sort before repository access.
+- Applied sanitizer to customer, meter, reading, invoice, tariff, and customer-scoped pageable read services.
+- Added integration coverage for pageable GET endpoints with `sort=["string"]`.
+- Validation: affected reliability integration test and full Gradle `test` pass with 55 tests.
+
+## 2026-06-24 — Flyway bootstrap integration tests
+
+- Added `FlywayBootstrapIntegrationTest` with an isolated H2 database and Hibernate `ddl-auto=validate` to verify schema comes from Flyway migrations.
+- Covered application context startup, four applied Flyway migrations, no pending migrations, no Flyway validation errors, seeded customers, meters, tariffs, readings, and demo invoices.
+- Added repository assertions against seeded customer, meter reading, and tariff data, plus transactional invoice generation using seeded `CUST-R001` data.
+- Saved final full-suite results in `TEST-RESULTS.md`.
+- Validation: Gradle `test --no-daemon` passes with 74 tests.
+
 - Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
 - Created root and service README files for workspace navigation and local service entry points.
 - Updated initialization workflow state to COMPLETE after Phase 8 verification.

@@ -1,6 +1,7 @@
 package com.ecovolt.billing.reading;
 
 
+import com.ecovolt.billing.common.PageableSanitizer;
 import com.ecovolt.billing.exception.BillingException;
 import com.ecovolt.billing.meter.Meter;
 import com.ecovolt.billing.meter.MeterService;
@@ -61,6 +62,6 @@ public class MeterReadingService {
 
     @Transactional(readOnly = true)
     public Page<MeterReadingResponse> findAll(Pageable pageable) {
-        return meterReadingRepository.findAll(pageable).map(MeterReadingResponse::from);
+        return meterReadingRepository.findAll(PageableSanitizer.withDefaultSort(pageable)).map(MeterReadingResponse::from);
     }
 }

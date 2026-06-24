@@ -27,6 +27,18 @@ When adding integration tests, vary all columns covered by unique constraints un
 ### Assert actual centralized error messages after one observed run [ACTIVE]
 For exception-handler coverage, confirm exact API error text from the real response before hard-coding assertions.
 
+### Preserve every noun in seed-data requests [ACTIVE]
+When implementing data migrations, map each requested data category to concrete rows or explicitly get approval before relying on earlier migrations.
+
+### Validate demo data from user-visible tables [ACTIVE]
+For seed migrations, assert the exact user-facing table outcomes, not only that migrations apply and APIs can generate data later.
+
+### Reproduce generated-client placeholders for pageable APIs [ACTIVE]
+When pageable APIs are documented through Swagger/OpenAPI, test generated placeholder query values in addition to hand-written valid parameters.
+
+### Ground seed cardinality in migrations before approval [ACTIVE]
+When asserting seeded row counts, count migration inserts directly before proposing exact cardinalities; if discovery conflicts with source, stop for explicit approval.
+
 ### <Generalized Preventive Rule> [ACTIVE|RETIRED]
 [Root cause, Reasons, Problems]
 

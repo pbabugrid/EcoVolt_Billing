@@ -1,5 +1,6 @@
 package com.ecovolt.billing.invoice;
 
+import com.ecovolt.billing.common.PageableSanitizer;
 import com.ecovolt.billing.exception.BillingException;
 import com.ecovolt.billing.exception.ResourceNotFoundException;
 import com.ecovolt.billing.invoice.dto.InvoiceResponse;
@@ -22,7 +23,7 @@ public class InvoiceService {
 
     @Transactional(readOnly = true)
     public Page<InvoiceResponse> findAll(Pageable pageable) {
-        return invoiceRepository.findAll(pageable).map(InvoiceResponse::from);
+        return invoiceRepository.findAll(PageableSanitizer.withDefaultSort(pageable)).map(InvoiceResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -48,7 +49,8 @@ public class InvoiceService {
 
     @Transactional(readOnly = true)
     public Page<InvoiceResponse> findByCustomerId(Long customerId, Pageable pageable) {
-        return invoiceRepository.findByCustomer_Id(customerId, pageable).map(InvoiceResponse::from);
+        return invoiceRepository.findByCustomer_Id(customerId, PageableSanitizer.withDefaultSort(pageable))
+                .map(InvoiceResponse::from);
     }
 
     private Invoice getInvoiceOrThrow(Long id) {

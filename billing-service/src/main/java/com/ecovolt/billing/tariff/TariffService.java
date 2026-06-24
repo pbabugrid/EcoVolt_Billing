@@ -1,5 +1,6 @@
 package com.ecovolt.billing.tariff;
 
+import com.ecovolt.billing.common.PageableSanitizer;
 import com.ecovolt.billing.exception.BillingException;
 import com.ecovolt.billing.exception.ResourceNotFoundException;
 import com.ecovolt.billing.tariff.dto.TariffPlanRequest;
@@ -61,7 +62,7 @@ public class TariffService {
 
     @Transactional(readOnly = true)
     public Page<TariffPlanResponse> findAll(Pageable pageable) {
-        return tariffPlanRepository.findAll(pageable).map(TariffPlanResponse::from);
+        return tariffPlanRepository.findAll(PageableSanitizer.withDefaultSort(pageable)).map(TariffPlanResponse::from);
     }
 
     @Transactional(readOnly = true)
