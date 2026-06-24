@@ -53,6 +53,15 @@ Style: concise, grep-friendly, and non-duplicative.
 - Added reliability integration coverage for auditing, optimistic locking, conflict handlers, pageable responses, customer-scoped APIs, meter detail, and invoice detail.
 - Validation: Gradle `test --no-daemon` passes.
 
+## 2026-06-24 — AQA integration and E2E coverage expansion
+
+- Added full REST billing workflow coverage: customer creation, meter registration, two reading captures, invoice generation, and invoice payment through MockMvc API calls.
+- Expanded invoice lifecycle matrix coverage for generated cancel, overdue pay, terminal pay rejection, cancelled pay rejection, and unknown invoice 404 responses.
+- Expanded reliability coverage for audit timestamp mutation semantics, `opt_lock` version increments, meter/reading uniqueness constraints, and customer pagination ordering/boundary metadata.
+- Expanded customer retention coverage to verify inactive customers remain readable/listed, meters remain queryable, and repeated delete remains `204 No Content`.
+- Added current-behavior status guard coverage documenting that invoice generation is currently permissive for inactive customers and non-active meters.
+- Validation: Gradle `test --quiet` passes with 54 tests.
+
 - Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
 - Created root and service README files for workspace navigation and local service entry points.
 - Updated initialization workflow state to COMPLETE after Phase 8 verification.

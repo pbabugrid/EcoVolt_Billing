@@ -21,6 +21,8 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -72,6 +74,25 @@ class CustomerRetentionIntegrationTest {
                 .extracting(Customer::getStatus)
                 .isEqualTo(CustomerStatus.INACTIVE);
         assertThat(invoiceRepository.findById(invoice.getId())).isPresent();
+
+        mockMvc.perform(get("/api/customers/{id}", customer.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(customer.getId()))
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
+
+        mockMvc.perform(get("/api/customers/{id}/meters", customer.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(meter.getId()))
+                .andExpect(jsonPath("$.content[0].customerId").value(customer.getId()));
+
+        mockMvc.perform(get("/api/customers")
+                        .param("sort", "id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(customer.getId()))
+                .andExpect(jsonPath("$.content[0].status").value("INACTIVE"));
+
+        mockMvc.perform(delete("/api/customers/{id}", customer.getId()))
+                .andExpect(status().isNoContent());
     }
 
     private MeterReading persistReading(Meter meter, String date, String value) {

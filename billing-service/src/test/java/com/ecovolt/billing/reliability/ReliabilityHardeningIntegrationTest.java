@@ -31,11 +31,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -64,6 +67,41 @@ class ReliabilityHardeningIntegrationTest {
         assertThat(saved).isNotNull();
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Customer update preserves createdAt, advances updatedAt, and increments opt_lock")
+    void customerUpdate_preservesAuditCreationAndIncrementsVersion() throws Exception {
+        CustomerSnapshot original = transactionTemplate().execute(status -> {
+            Customer saved = customerRepository.saveAndFlush(Customer.builder()
+                    .customerNumber("CUST-AUDIT-MUTATION")
+                    .name("Audit Mutation")
+                    .email("audit-mutation@ecovolt.test")
+                    .status(CustomerStatus.ACTIVE)
+                    .build());
+            return CustomerSnapshot.from(saved);
+        });
+
+        mockMvc.perform(put("/api/customers/{id}", original.id())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Audit Mutation Updated",
+                                  "email": "audit-mutation-updated@ecovolt.test",
+                                  "phone": "+15550000001",
+                                  "address": "Updated audit address"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(original.id()))
+                .andExpect(jsonPath("$.name").value("Audit Mutation Updated"));
+
+        CustomerSnapshot updated = transactionTemplate().execute(status ->
+                customerRepository.findById(original.id()).map(CustomerSnapshot::from).orElseThrow());
+
+        assertThat(updated.createdAt()).isEqualTo(original.createdAt());
+        assertThat(updated.updatedAt()).isAfter(original.updatedAt());
+        assertThat(updated.optLock()).isEqualTo(original.optLock() + 1);
     }
 
     @Test
@@ -127,6 +165,56 @@ class ReliabilityHardeningIntegrationTest {
     }
 
     @Test
+    @DisplayName("Meter and reading uniqueness constraints reject duplicate persistence")
+    void databaseConstraintViolation_rejectsDuplicateMeterNumberAndReadingDate() {
+        assertThatThrownBy(() -> transactionTemplate().executeWithoutResult(status -> {
+            Customer customer = customerRepository.save(Customer.builder()
+                    .customerNumber("CUST-CONSTRAINT-GRAPH")
+                    .name("Constraint Graph")
+                    .email("constraint-graph@ecovolt.test")
+                    .status(CustomerStatus.ACTIVE)
+                    .build());
+            meterRepository.saveAndFlush(Meter.builder()
+                    .meterNumber("MTR-CONSTRAINT-DUP")
+                    .installationDate(LocalDate.of(2024, 1, 1))
+                    .status(MeterStatus.ACTIVE)
+                    .customer(customer)
+                    .build());
+            meterRepository.saveAndFlush(Meter.builder()
+                    .meterNumber("MTR-CONSTRAINT-DUP")
+                    .installationDate(LocalDate.of(2024, 1, 2))
+                    .status(MeterStatus.ACTIVE)
+                    .customer(customer)
+                    .build());
+        })).isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> transactionTemplate().executeWithoutResult(status -> {
+            Customer customer = customerRepository.save(Customer.builder()
+                    .customerNumber("CUST-READING-CONSTRAINT")
+                    .name("Reading Constraint")
+                    .email("reading-constraint@ecovolt.test")
+                    .status(CustomerStatus.ACTIVE)
+                    .build());
+            Meter meter = meterRepository.save(Meter.builder()
+                    .meterNumber("MTR-READING-CONSTRAINT")
+                    .installationDate(LocalDate.of(2024, 1, 1))
+                    .status(MeterStatus.ACTIVE)
+                    .customer(customer)
+                    .build());
+            meterReadingRepository.saveAndFlush(MeterReading.builder()
+                    .meter(meter)
+                    .readingDate(LocalDate.of(2024, 2, 1))
+                    .readingValue(new BigDecimal("100.00"))
+                    .build());
+            meterReadingRepository.saveAndFlush(MeterReading.builder()
+                    .meter(meter)
+                    .readingDate(LocalDate.of(2024, 2, 1))
+                    .readingValue(new BigDecimal("110.00"))
+                    .build());
+        })).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
     @DisplayName("Paged and customer-scoped APIs expose page metadata and filtered content")
     void pagedAndScopedApis_returnPageResponses() throws Exception {
         TestGraph graph = transactionTemplate().execute(status -> persistGraph("PAGED"));
@@ -176,6 +264,51 @@ class ReliabilityHardeningIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(graph.invoiceId()))
                 .andExpect(jsonPath("$.customerId").value(graph.customerId()));
+    }
+
+    @Test
+    @DisplayName("Customer pagination exposes stable sort order and boundary metadata")
+    void customerPagination_returnsStableSortOrderAndBoundaryMetadata() throws Exception {
+        List<Long> ids = transactionTemplate().execute(status -> List.of(
+                customerRepository.save(Customer.builder()
+                        .customerNumber("CUST-PAGE-A")
+                        .name("Page A")
+                        .email("page-a@ecovolt.test")
+                        .status(CustomerStatus.ACTIVE)
+                        .build()).getId(),
+                customerRepository.save(Customer.builder()
+                        .customerNumber("CUST-PAGE-B")
+                        .name("Page B")
+                        .email("page-b@ecovolt.test")
+                        .status(CustomerStatus.ACTIVE)
+                        .build()).getId(),
+                customerRepository.save(Customer.builder()
+                        .customerNumber("CUST-PAGE-C")
+                        .name("Page C")
+                        .email("page-c@ecovolt.test")
+                        .status(CustomerStatus.ACTIVE)
+                        .build()).getId()));
+
+        mockMvc.perform(get("/api/customers")
+                        .param("page", "0")
+                        .param("size", "2")
+                        .param("sort", "id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(ids.get(2)))
+                .andExpect(jsonPath("$.content[1].id").value(ids.get(1)))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.totalPages").isNumber())
+                .andExpect(jsonPath("$.last").isBoolean());
+
+        mockMvc.perform(get("/api/customers")
+                        .param("page", "9999")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.number").value(9999))
+                .andExpect(jsonPath("$.totalElements").isNumber());
     }
 
     private Customer loadDetachedCustomer(Long customerId) {
@@ -232,6 +365,16 @@ class ReliabilityHardeningIntegrationTest {
     }
 
     private record TestGraph(Long customerId, Long meterId, Long invoiceId) {
+    }
+
+    private record CustomerSnapshot(Long id, Instant createdAt, Instant updatedAt, Long optLock) {
+        private static CustomerSnapshot from(Customer customer) {
+            return new CustomerSnapshot(
+                    customer.getId(),
+                    customer.getCreatedAt(),
+                    customer.getUpdatedAt(),
+                    customer.getOptLock());
+        }
     }
 
     @RestController

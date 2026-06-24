@@ -80,6 +80,28 @@ class InvoiceLifecycleIntegrationTest {
     }
 
     @Test
+    @DisplayName("Generated invoice can be cancelled through the API")
+    void generatedInvoice_canBeCancelledThroughApi() throws Exception {
+        Invoice invoice = persistInvoice("INV-LIFE-API-CANCEL", InvoiceStatus.GENERATED);
+
+        mockMvc.perform(post("/api/invoices/{id}/cancel", invoice.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(invoice.getId()))
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+
+    @Test
+    @DisplayName("Overdue invoice can be paid through the API")
+    void overdueInvoice_canBePaidThroughApi() throws Exception {
+        Invoice invoice = persistInvoice("INV-LIFE-API-OVERDUE-PAY", InvoiceStatus.OVERDUE);
+
+        mockMvc.perform(post("/api/invoices/{id}/pay", invoice.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(invoice.getId()))
+                .andExpect(jsonPath("$.status").value("PAID"));
+    }
+
+    @Test
     @DisplayName("Paid invoice cannot be cancelled")
     void paidInvoice_cannotBeCancelled() {
         Invoice invoice = persistInvoice("INV-LIFE-INVALID", InvoiceStatus.PAID);
@@ -110,6 +132,41 @@ class InvoiceLifecycleIntegrationTest {
                         "Invoice INV-LIFE-API-INVALID cannot transition from CANCELLED to CANCELLED"));
     }
 
+    @Test
+    @DisplayName("Pay endpoint rejects terminal invoices")
+    void payEndpoint_rejectsTerminalInvoices() throws Exception {
+        Invoice paid = persistInvoice("INV-LIFE-API-PAID-PAY", InvoiceStatus.PAID);
+        MeterReading cancelledPrevious = persistReading(previous.getMeter(), "2024-03-01", "170.00");
+        MeterReading cancelledCurrent = persistReading(previous.getMeter(), "2024-04-01", "190.00");
+        Invoice cancelled = persistInvoice(
+                "INV-LIFE-API-CANCELLED-PAY",
+                InvoiceStatus.CANCELLED,
+                cancelledPrevious,
+                cancelledCurrent);
+
+        mockMvc.perform(post("/api/invoices/{id}/pay", paid.getId()))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(
+                        "Invoice INV-LIFE-API-PAID-PAY cannot transition from PAID to PAID"));
+
+        mockMvc.perform(post("/api/invoices/{id}/pay", cancelled.getId()))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(
+                        "Invoice INV-LIFE-API-CANCELLED-PAY cannot transition from CANCELLED to PAID"));
+    }
+
+    @Test
+    @DisplayName("Lifecycle endpoints return 404 for unknown invoices")
+    void lifecycleEndpoints_return404ForUnknownInvoices() throws Exception {
+        mockMvc.perform(post("/api/invoices/{id}/pay", 999_999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Invoice not found with id = '999999'"));
+
+        mockMvc.perform(post("/api/invoices/{id}/cancel", 999_999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Invoice not found with id = '999999'"));
+    }
+
     private MeterReading persistReading(Meter meter, String date, String value) {
         return meterReadingRepository.save(MeterReading.builder()
                 .meter(meter)
@@ -119,17 +176,25 @@ class InvoiceLifecycleIntegrationTest {
     }
 
     private Invoice persistInvoice(String invoiceNumber, InvoiceStatus status) {
+        return persistInvoice(invoiceNumber, status, previous, current);
+    }
+
+    private Invoice persistInvoice(
+            String invoiceNumber,
+            InvoiceStatus status,
+            MeterReading previousReading,
+            MeterReading currentReading) {
         return invoiceRepository.save(Invoice.builder()
                 .invoiceNumber(invoiceNumber)
                 .customer(customer)
-                .previousReading(previous.getReadingValue())
-                .currentReading(current.getReadingValue())
-                .unitsConsumed(current.getReadingValue().subtract(previous.getReadingValue()))
+                .previousReading(previousReading.getReadingValue())
+                .currentReading(currentReading.getReadingValue())
+                .unitsConsumed(currentReading.getReadingValue().subtract(previousReading.getReadingValue()))
                 .amount(new BigDecimal("250.00"))
                 .generatedDate(LocalDate.of(2024, 2, 1))
                 .status(status)
-                .previousReadingRecord(previous)
-                .currentReadingRecord(current)
+                .previousReadingRecord(previousReading)
+                .currentReadingRecord(currentReading)
                 .build());
     }
 }

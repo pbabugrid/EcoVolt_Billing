@@ -21,6 +21,12 @@ Put stakeholder-visible purpose in `docs/CONTEXT.md`; put modules, APIs, persist
 ### Update tests when service contracts change [ACTIVE]
 When replacing a simple method contract with richer domain output, update direct mocks and helper factories in the same pass.
 
+### Align test fixtures with database uniqueness contracts [ACTIVE]
+When adding integration tests, vary all columns covered by unique constraints unless the test explicitly targets that constraint.
+
+### Assert actual centralized error messages after one observed run [ACTIVE]
+For exception-handler coverage, confirm exact API error text from the real response before hard-coding assertions.
+
 ### <Generalized Preventive Rule> [ACTIVE|RETIRED]
 [Root cause, Reasons, Problems]
 
