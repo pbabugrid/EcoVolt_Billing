@@ -1,0 +1,1842 @@
+{
+  "info": {
+    "_postman_id": "ecovolt-billing-v1",
+    "name": "EcoVolt Billing API",
+    "description": "Complete API test suite for EcoVolt billing-service covering Customer, Meter, Reading, Invoice, and Tariff APIs with E2E lifecycle and negative tests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",      "value": "http://localhost:8080" },
+    { "key": "customerId",   "value": "" },
+    { "key": "meterId",      "value": "" },
+    { "key": "readingId1",   "value": "" },
+    { "key": "readingId2",   "value": "" },
+    { "key": "invoiceId",    "value": "" },
+    { "key": "cancelInvoiceId", "value": "" },
+    { "key": "tariffId",     "value": "" },
+    { "key": "tariffVersion","value": "" },
+    { "key": "deleteCustomerId","value": "" },
+    { "key": "customerEmail","value": "" },
+    { "key": "meterNumber",  "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "description": "Seed unique test data identifiers used across the run.",
+      "item": [
+        {
+          "name": "Set unique run variables",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.environment.set('customerEmail',  'customer_' + ts + '@ecovolt.test');",
+                  "pm.environment.set('meterNumber',    'MTR-' + ts);",
+                  "pm.environment.set('tariffVersion',  String(Math.floor(ts / 1000)));",
+                  "pm.environment.set('deleteCustomerEmail', 'delete_' + ts + '@ecovolt.test');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Setup request is skipped (no-op)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Health request used to trigger the pre-request script that seeds collision-free test data."
+          }
+        },
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Service is UP', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Status is UP', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customer APIs",
+      "description": "CRUD operations on /api/customers.",
+      "item": [
+        {
+          "name": "Create Customer",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('customerEmail')) {",
+                  "    const ts = Date.now();",
+                  "    pm.environment.set('customerEmail', 'customer_' + ts + '@ecovolt.test');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response has id', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "    pm.environment.set('customerId', json.id);",
+                  "});",
+                  "pm.test('Response schema valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('id','customerNumber','name','email','phone','address','status','createdAt','updatedAt');",
+                  "    pm.expect(json.status).to.eql('ACTIVE');",
+                  "    pm.expect(json.customerNumber).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Watts\",\n  \"email\": \"{{customerEmail}}\",\n  \"phone\": \"+1 555 100 2000\",\n  \"address\": \"12 Solar Lane, Austin TX 78701\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "List Customers (pageable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Pageable response shape', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content').that.is.an('array');",
+                  "    pm.expect(json).to.have.property('totalElements').that.is.a('number');",
+                  "    pm.expect(json).to.have.property('totalPages').that.is.a('number');",
+                  "    pm.expect(json).to.have.property('size').that.is.a('number');",
+                  "    pm.expect(json).to.have.property('number').that.is.a('number');",
+                  "});",
+                  "pm.test('At least one customer present', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.totalElements).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers?page=0&size=20&sort=id,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "id,asc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Customer by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response schema valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(pm.environment.get('customerId'));",
+                  "    pm.expect(json).to.have.all.keys('id','customerNumber','name','email','phone','address','status','createdAt','updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Name updated', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.name).to.eql('Alice Watts Updated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Watts Updated\",\n  \"email\": \"{{customerEmail}}\",\n  \"phone\": \"+1 555 100 2001\",\n  \"address\": \"12 Solar Lane Updated, Austin TX 78701\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Invoices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Pageable shape', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content').that.is.an('array');",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}/invoices?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}", "invoices"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Meters",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Pageable shape', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content').that.is.an('array');",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}/meters?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}", "meters"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Customer for Soft Delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Store deleteCustomerId', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set('deleteCustomerId', json.id);",
+                  "    pm.expect(json.status).to.eql('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Delete Candidate\",\n  \"email\": \"{{deleteCustomerEmail}}\",\n  \"phone\": \"+1 555 100 3000\",\n  \"address\": \"30 Delete Candidate Rd\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "Delete Customer (soft-deactivate)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{deleteCustomerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{deleteCustomerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Verify Customer is INACTIVE after delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status is INACTIVE', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('INACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{deleteCustomerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{deleteCustomerId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tariff APIs",
+      "description": "Tariff plan management on /api/tariff-plans.",
+      "item": [
+        {
+          "name": "Create Tariff Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response schema valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "    pm.environment.set('tariffId', json.id);",
+                  "    pm.expect(json).to.have.all.keys('id','type','version','name','effectiveFrom','effectiveTo','active','slabs');",
+                  "    pm.expect(json.active).to.be.true;",
+                  "    pm.expect(json.type).to.eql('RESIDENTIAL');",
+                  "    pm.expect(json.slabs).to.be.an('array').and.have.lengthOf(3);",
+                  "});",
+                  "pm.test('Slabs schema valid', function () {",
+                  "    const slabs = pm.response.json().slabs;",
+                  "    slabs.forEach(function(s) {",
+                  "        pm.expect(s).to.have.all.keys('id','sortOrder','fromUnits','toUnits','ratePerUnit');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"RESIDENTIAL\",\n  \"version\": {{tariffVersion}},\n  \"name\": \"Historical Residential Test Plan\",\n  \"effectiveFrom\": \"2023-01-01\",\n  \"effectiveTo\": \"2023-12-31\",\n  \"slabs\": [\n    { \"fromUnits\": 0,   \"toUnits\": 100,  \"ratePerUnit\": 1.50 },\n    { \"fromUnits\": 100, \"toUnits\": 300,  \"ratePerUnit\": 2.50 },\n    { \"fromUnits\": 300, \"toUnits\": null, \"ratePerUnit\": 4.00 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tariff-plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tariff-plans"]
+            }
+          }
+        },
+        {
+          "name": "List Tariff Plans (pageable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Pageable shape', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content').that.is.an('array');",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tariff-plans?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tariff-plans"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Tariff Plan by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response schema valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(pm.environment.get('tariffId'));",
+                  "    pm.expect(json).to.have.all.keys('id','type','version','name','effectiveFrom','effectiveTo','active','slabs');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tariff-plans/{{tariffId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tariff-plans", "{{tariffId}}"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate Tariff Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Plan deactivated', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.active).to.be.false;",
+                  "    pm.expect(json.effectiveTo).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tariff-plans/{{tariffId}}/deactivate?effectiveTo=2023-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tariff-plans", "{{tariffId}}", "deactivate"],
+              "query": [
+                { "key": "effectiveTo", "value": "2023-12-31" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Meter APIs",
+      "description": "Meter registration and retrieval on /api/meters.",
+      "item": [
+        {
+          "name": "Register Meter",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('meterNumber')) {",
+                  "    pm.environment.set('meterNumber', 'MTR-' + Date.now());",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response schema valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "    pm.environment.set('meterId', json.id);",
+                  "    pm.expect(json).to.have.all.keys('id','meterNumber','installationDate','status','tariffType','customerId');",
+                  "    pm.expect(json.status).to.eql('ACTIVE');",
+                  "    pm.expect(json.tariffType).to.eql('RESIDENTIAL');",
+                  "    pm.expect(json.customerId).to.eql(pm.environment.get('customerId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{customerId}},\n  \"meterNumber\": \"{{meterNumber}}\",\n  \"installationDate\": \"2024-01-15\",\n  \"tariffType\": \"RESIDENTIAL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/meters",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "meters"]
+            }
+          }
+        },
+        {
+          "name": "List Meters (pageable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Pageable shape', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content').that.is.an('array');",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meters?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "meters"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Meter by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response schema valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(pm.environment.get('meterId'));",
+                  "    pm.expect(json).to.have.all.keys('id','meterNumber','installationDate','status','tariffType','customerId');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meters/{{meterId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "meters", "{{meterId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reading APIs",
+      "description": "Meter reading capture and retrieval on /api/readings.",
+      "item": [
+        {
+          "name": "Add Reading 1 (baseline)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response schema valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "    pm.environment.set('readingId1', json.id);",
+                  "    pm.expect(json).to.have.all.keys('id','meterId','readingDate','readingValue');",
+                  "    pm.expect(json.meterId).to.eql(pm.environment.get('meterId'));",
+                  "    pm.expect(json.readingValue).to.eql(1000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-02-01\",\n  \"readingValue\": 1000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "readings"]
+            }
+          }
+        },
+        {
+          "name": "Add Reading 2 (current)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response schema valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "    pm.environment.set('readingId2', json.id);",
+                  "    pm.expect(json).to.have.all.keys('id','meterId','readingDate','readingValue');",
+                  "    pm.expect(json.readingValue).to.eql(1250);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-03-01\",\n  \"readingValue\": 1250\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "readings"]
+            }
+          }
+        },
+        {
+          "name": "List Readings (pageable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Pageable shape', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content').that.is.an('array');",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "    pm.expect(json.content.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/readings?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "readings"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoice APIs",
+      "description": "Invoice generation, retrieval, and lifecycle on /api/invoices.",
+      "item": [
+        {
+          "name": "Generate Invoice for Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Returns array with at least one invoice', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array').and.have.lengthOf.at.least(1);",
+                  "    const inv = json[0];",
+                  "    pm.environment.set('invoiceId', inv.id);",
+                  "});",
+                  "pm.test('Invoice schema valid', function () {",
+                  "    const inv = pm.response.json()[0];",
+                  "    pm.expect(inv).to.have.all.keys(",
+                  "        'id','invoiceNumber','customerId','previousReadingId','currentReadingId',",
+                  "        'previousReading','currentReading','unitsConsumed','amount',",
+                  "        'tariffPlanId','tariffType','tariffVersion','generatedDate','status'",
+                  "    );",
+                  "    pm.expect(inv.status).to.eql('GENERATED');",
+                  "    pm.expect(inv.customerId).to.eql(pm.environment.get('customerId'));",
+                  "    pm.expect(inv.tariffType).to.eql('RESIDENTIAL');",
+                  "    pm.expect(inv.tariffPlanId).to.be.a('number');",
+                  "    pm.expect(inv.tariffVersion).to.be.a('number');",
+                  "    pm.expect(inv.unitsConsumed).to.eql(250);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/generate/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "generate", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "List Invoices (pageable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Pageable shape', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content').that.is.an('array');",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Invoice by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response schema valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(pm.environment.get('invoiceId'));",
+                  "    pm.expect(json).to.have.all.keys(",
+                  "        'id','invoiceNumber','customerId','previousReadingId','currentReadingId',",
+                  "        'previousReading','currentReading','unitsConsumed','amount',",
+                  "        'tariffPlanId','tariffType','tariffVersion','generatedDate','status'",
+                  "    );",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "Pay Invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status is PAID', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('PAID');",
+                  "    pm.expect(json.id).to.eql(pm.environment.get('invoiceId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}/pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}", "pay"]
+            }
+          }
+        },
+        {
+          "name": "Add Reading 3 for Cancel Scenario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Cancel scenario reading stored', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set('readingId3', json.id);",
+                  "    pm.expect(json.readingValue).to.eql(1400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-04-01\",\n  \"readingValue\": 1400\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "readings"]
+            }
+          }
+        },
+        {
+          "name": "Generate Invoice for Cancel Scenario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Store cancelInvoiceId', function () {",
+                  "    const invoices = pm.response.json();",
+                  "    pm.expect(invoices).to.be.an('array').and.have.lengthOf.at.least(1);",
+                  "    pm.environment.set('cancelInvoiceId', invoices[0].id);",
+                  "    pm.expect(invoices[0].status).to.eql('GENERATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/generate/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "generate", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status is CANCELLED', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(pm.environment.get('cancelInvoiceId'));",
+                  "    pm.expect(json.status).to.eql('CANCELLED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{cancelInvoiceId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{cancelInvoiceId}}", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "E2E Invoice Lifecycle",
+      "description": "Full end-to-end flow: new Customer → verify active seeded Tariff → Meter → 2 Readings → Invoice → Retrieve → Pay → Verify PAID. All IDs stored as collection variables.",
+      "item": [
+        {
+          "name": "E2E 01 - Create Customer",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.environment.set('e2e_email', 'e2e_' + ts + '@ecovolt.test');",
+                  "pm.environment.set('e2e_meterNum', 'E2E-MTR-' + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('E2E: Customer created (201)', function () { pm.response.to.have.status(201); });",
+                  "pm.test('E2E: Store customerId', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "    pm.environment.set('e2e_customerId', json.id);",
+                  "    pm.expect(json.status).to.eql('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"E2E Test Customer\",\n  \"email\": \"{{e2e_email}}\",\n  \"phone\": \"+1 555 200 0001\",\n  \"address\": \"1 End-to-End St, Austin TX 78702\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "E2E 02 - Verify Active RESIDENTIAL Tariff Exists",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('E2E: Tariff list retrieved (200)', function () { pm.response.to.have.status(200); });",
+                  "pm.test('E2E: Store active RESIDENTIAL tariffId', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.content).to.be.an('array');",
+                  "    const plan = json.content.find(p => p.type === 'RESIDENTIAL' && p.active === true);",
+                  "    pm.expect(plan, 'active RESIDENTIAL tariff plan').to.exist;",
+                  "    pm.environment.set('e2e_tariffId', plan.id);",
+                  "    pm.expect(plan.slabs).to.be.an('array').with.lengthOf.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tariff-plans?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tariff-plans"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E2E 03 - Register RESIDENTIAL Meter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('E2E: Meter registered (201)', function () { pm.response.to.have.status(201); });",
+                  "pm.test('E2E: Store meterId, verify RESIDENTIAL', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "    pm.environment.set('e2e_meterId', json.id);",
+                  "    pm.expect(json.status).to.eql('ACTIVE');",
+                  "    pm.expect(json.tariffType).to.eql('RESIDENTIAL');",
+                  "    pm.expect(json.customerId).to.eql(pm.environment.get('e2e_customerId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{e2e_customerId}},\n  \"meterNumber\": \"{{e2e_meterNum}}\",\n  \"installationDate\": \"2024-01-15\",\n  \"tariffType\": \"RESIDENTIAL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/meters",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "meters"]
+            }
+          }
+        },
+        {
+          "name": "E2E 04 - Add Reading 1 (1000 units)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('E2E: Reading 1 created (201)', function () { pm.response.to.have.status(201); });",
+                  "pm.test('E2E: Store readingId1, verify value 1000', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set('e2e_readingId1', json.id);",
+                  "    pm.expect(json.readingValue).to.eql(1000);",
+                  "    pm.expect(json.meterId).to.eql(pm.environment.get('e2e_meterId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{e2e_meterId}},\n  \"readingDate\": \"2024-02-01\",\n  \"readingValue\": 1000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "readings"]
+            }
+          }
+        },
+        {
+          "name": "E2E 05 - Add Reading 2 (1250 units, delta=250)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('E2E: Reading 2 created (201)', function () { pm.response.to.have.status(201); });",
+                  "pm.test('E2E: Store readingId2, verify value 1250', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set('e2e_readingId2', json.id);",
+                  "    pm.expect(json.readingValue).to.eql(1250);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{e2e_meterId}},\n  \"readingDate\": \"2024-03-01\",\n  \"readingValue\": 1250\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "readings"]
+            }
+          }
+        },
+        {
+          "name": "E2E 06 - Generate Invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('E2E: Invoice generated (201)', function () { pm.response.to.have.status(201); });",
+                  "pm.test('E2E: Store invoiceId, assert tariff and consumption fields', function () {",
+                  "    const invoices = pm.response.json();",
+                  "    pm.expect(invoices).to.be.an('array').with.lengthOf.at.least(1);",
+                  "    const inv = invoices[0];",
+                  "    pm.environment.set('e2e_invoiceId', inv.id);",
+                  "    pm.expect(inv.status).to.eql('GENERATED');",
+                  "    pm.expect(inv.tariffType).to.eql('RESIDENTIAL');",
+                  "    pm.expect(inv.tariffPlanId).to.be.a('number');",
+                  "    pm.expect(inv.tariffVersion).to.be.a('number');",
+                  "    pm.expect(inv.unitsConsumed).to.eql(250);",
+                  "    pm.expect(inv.amount).to.be.a('number').and.greaterThan(0);",
+                  "    pm.expect(inv.customerId).to.eql(pm.environment.get('e2e_customerId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/generate/{{e2e_customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "generate", "{{e2e_customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "E2E 07 - Retrieve Invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('E2E: Retrieve invoice (200)', function () { pm.response.to.have.status(200); });",
+                  "pm.test('E2E: Verify GENERATED status', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(pm.environment.get('e2e_invoiceId'));",
+                  "    pm.expect(json.status).to.eql('GENERATED');",
+                  "    pm.expect(json.invoiceNumber).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{e2e_invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{e2e_invoiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "E2E 08 - Pay Invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('E2E: Pay invoice (200)', function () { pm.response.to.have.status(200); });",
+                  "pm.test('E2E: Status transitions to PAID', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('PAID');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{e2e_invoiceId}}/pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{e2e_invoiceId}}", "pay"]
+            }
+          }
+        },
+        {
+          "name": "E2E 09 - Verify Invoice PAID (final assertion)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('E2E: Final GET shows PAID status', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('PAID');",
+                  "});",
+                  "pm.test('E2E: Invoice lifecycle complete - all IDs stored', function () {",
+                  "    ['e2e_customerId','e2e_tariffId','e2e_meterId','e2e_readingId1','e2e_readingId2','e2e_invoiceId'].forEach(function (key) {",
+                  "        pm.expect(pm.environment.get(key), key).to.exist;",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{e2e_invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{e2e_invoiceId}}"]
+            }
+          }
+        }
+      ],
+      "variable": [
+        { "key": "e2e_email",      "value": "" },
+        { "key": "e2e_meterNum",   "value": "" },
+        { "key": "e2e_customerId", "value": "" },
+        { "key": "e2e_tariffId",   "value": "" },
+        { "key": "e2e_meterId",    "value": "" },
+        { "key": "e2e_readingId1", "value": "" },
+        { "key": "e2e_readingId2", "value": "" },
+        { "key": "e2e_invoiceId",  "value": "" }
+      ]
+    },
+    {
+      "name": "Negative Tests",
+      "description": "Error path coverage: duplicate data, invalid transitions, missing entities, validation failures.",
+      "item": [
+        {
+          "name": "NEG: Duplicate Customer email currently allowed (contract gap)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Current API allows duplicate customer email (201)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Duplicate customer contract gap is visible', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.email).to.eql(pm.environment.get('customerEmail'));",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate Alice\",\n  \"email\": \"{{customerEmail}}\",\n  \"phone\": \"+1 555 100 9999\",\n  \"address\": \"99 Duplicate Ave\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Duplicate Meter number (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422 for duplicate meter number', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error shape valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(422);",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{customerId}},\n  \"meterNumber\": \"{{meterNumber}}\",\n  \"installationDate\": \"2024-01-15\",\n  \"tariffType\": \"RESIDENTIAL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/meters",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "meters"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Duplicate Reading date for same meter (409 or 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 or 422 for duplicate reading date', function () {",
+                  "    pm.expect([409, 422]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('Error shape valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('status');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-02-01\",\n  \"readingValue\": 1000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "readings"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Non-monotonic Reading value (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422 for non-monotonic reading', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error shape valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(422);",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-04-01\",\n  \"readingValue\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "readings"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Invoice generation replay (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422 for duplicate invoice generation', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error shape valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(422);",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/generate/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "generate", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Pay already-PAID invoice (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422 for invalid invoice transition', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error shape valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}/pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}", "pay"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Cancel already-PAID invoice (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422 for cancel on terminal invoice', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error shape valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Duplicate Tariff type/version (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422 for duplicate tariff type/version', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error shape valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(422);",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"RESIDENTIAL\",\n  \"version\": {{tariffVersion}},\n  \"name\": \"Duplicate Historical Residential Test Plan\",\n  \"effectiveFrom\": \"2023-01-01\",\n  \"effectiveTo\": \"2023-12-31\",\n  \"slabs\": [\n    { \"fromUnits\": 0,   \"toUnits\": 100,  \"ratePerUnit\": 1.50 },\n    { \"fromUnits\": 100, \"toUnits\": 300,  \"ratePerUnit\": 2.50 },\n    { \"fromUnits\": 300, \"toUnits\": null, \"ratePerUnit\": 4.00 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tariff-plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tariff-plans"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Customer validation error - blank name (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 for validation error', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error shape with fieldErrors', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('timestamp','status','error','message','path','fieldErrors');",
+                  "    pm.expect(json.status).to.eql(400);",
+                  "    pm.expect(json.fieldErrors).to.be.an('object');",
+                  "    pm.expect(json.fieldErrors).to.have.property('name');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"email\": \"bad-req@ecovolt.test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Customer validation error - invalid email (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 for invalid email', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('fieldErrors contains email', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.fieldErrors).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bad Email Customer\",\n  \"email\": \"not-an-email\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Customer not found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 for missing customer', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Error shape valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('timestamp','status','error','message','path','fieldErrors');",
+                  "    pm.expect(json.status).to.eql(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "999999999"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Meter not found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 for missing meter', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meters/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "meters", "999999999"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Invoice not found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 for missing invoice', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "999999999"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Tariff not found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 for missing tariff', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tariff-plans/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tariff-plans", "999999999"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Tariff validation error - empty slabs (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 for empty slabs', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('fieldErrors contains slabs', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.fieldErrors).to.be.an('object');",
+                  "    pm.expect(Object.keys(json.fieldErrors).join(',')).to.match(/slabs/i);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"RESIDENTIAL\",\n  \"version\": 99,\n  \"name\": \"Bad Plan\",\n  \"effectiveFrom\": \"2024-01-01\",\n  \"slabs\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tariff-plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tariff-plans"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Tariff slab invalid ratePerUnit (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 for invalid slab rate', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"COMMERCIAL\",\n  \"version\": 99,\n  \"name\": \"Bad Slab Plan\",\n  \"effectiveFrom\": \"2024-01-01\",\n  \"slabs\": [\n    { \"fromUnits\": 0, \"toUnits\": 100, \"ratePerUnit\": 0 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tariff-plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tariff-plans"]
+            }
+          }
+        },
+        {
+          "name": "NEG: Reading with negative value (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 for negative reading value', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('fieldErrors contains readingValue', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.fieldErrors).to.have.property('readingValue');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meterId\": {{meterId}},\n  \"readingDate\": \"2024-05-01\",\n  \"readingValue\": -50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "readings"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

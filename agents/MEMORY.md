@@ -39,6 +39,9 @@ When pageable APIs are documented through Swagger/OpenAPI, test generated placeh
 ### Ground seed cardinality in migrations before approval [ACTIVE]
 When asserting seeded row counts, count migration inserts directly before proposing exact cardinalities; if discovery conflicts with source, stop for explicit approval.
 
+### Constrain delegated edits to approved artifact paths [ACTIVE]
+After subagent implementation, inspect `git status` and revert only unapproved artifact-path changes before validation; generated outputs can otherwise drift outside the requested structure.
+
 ### <Generalized Preventive Rule> [ACTIVE|RETIRED]
 [Root cause, Reasons, Problems]
 

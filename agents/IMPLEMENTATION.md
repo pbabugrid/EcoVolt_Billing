@@ -91,6 +91,17 @@ Style: concise, grep-friendly, and non-duplicative.
 - Covered customer, meter, reading, invoice, tariff detail/deactivation, customer-scoped meter/invoice, pagination, lifecycle, validation, missing entity, duplicate meter, duplicate-customer feasibility, and optimistic-lock feasibility scenarios.
 - Added end-to-end workflow from customer creation through paid invoice verification and embedded Newman CI command.
 
+## 2026-06-26 — Postman/Newman structured test suite
+
+- Added `postman/` directory with full Newman-runnable API test suite.
+- `postman/collections/EcoVolt-Billing.postman_collection.json`: 8 folders, 54 requests covering all Customer/Tariff/Meter/Reading/Invoice endpoints; E2E lifecycle folder (9 steps, Customer→active RESIDENTIAL tariff verification→Meter→Reading×2→Invoice→Pay→Verify PAID); Negative Tests folder covers validation errors, missing entities, duplicate meter/reading/tariff, invoice replay, invalid lifecycle transitions, and the current duplicate-customer contract gap.
+- `postman/environments/local.postman_environment.json` and `ci.postman_environment.json`: no secrets, `baseUrl` defaulting to `http://localhost:8080`.
+- `postman/scripts/run-newman.sh`: POSIX/Bash, `set -euo pipefail`, HTML+JUnit reports to `newman-reports/`, supports `BILLING_BASE_URL` env var override, uses global Newman or `npx` fallback, fails build on Newman non-zero exit.
+- `.github/workflows/postman-newman.yml`: Java 25 (Temurin), Gradle `bootJar`, background service start, health poll (60 s, 2 s intervals), Node 20 + Newman, report upload as artifacts, JUnit report via `dorny/test-reporter`.
+- `postman/README.md`: import guide, local Newman usage, CI/CD explanation, environment variable table.
+- No secrets in any file; no teardown DELETEs for meter/reading/invoice; unique timestamp-based test data seeded via pre-request scripts.
+- Validation: isolated local service on port 18080 passed Newman via `postman/scripts/run-newman.sh local` with 54 requests and 106 assertions.
+
 - Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
 - Created root and service README files for workspace navigation and local service entry points.
 - Updated initialization workflow state to COMPLETE after Phase 8 verification.
