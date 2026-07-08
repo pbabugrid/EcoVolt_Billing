@@ -432,6 +432,302 @@ class ReliabilityHardeningIntegrationTest {
     }
 
     @Test
+    @DisplayName("QUERY invoice API rejects missing JSON body")
+    void queryInvoices_rejectsMissingBody() throws Exception {
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Request body is malformed or unreadable."));
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API falls back to id ASC for Swagger placeholder sort")
+    void queryInvoices_swaggerSortPlaceholderFallsBackToIdAsc() throws Exception {
+        transactionTemplate().execute(status -> List.of(
+                persistGraph("QUERY-PLACEHOLDER-SORT-A").invoiceId(),
+                persistGraph("QUERY-PLACEHOLDER-SORT-B").invoiceId()));
+        List<Long> expectedIds = firstInvoiceIdsAsc(2);
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 2,
+                                  "sort": ["string"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(expectedIds.get(0)))
+                .andExpect(jsonPath("$.content[1].id").value(expectedIds.get(1)));
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API returns empty content for out-of-range page")
+    void queryInvoices_returnsEmptyContentForOutOfRangePage() throws Exception {
+        transactionTemplate().execute(status -> persistGraph("QUERY-OUT-OF-RANGE"));
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 9999,
+                                  "size": 20
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.number").value(9999))
+                .andExpect(jsonPath("$.totalElements").isNumber());
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API exposes pagination metadata")
+    void queryInvoices_exposesPaginationMetadata() throws Exception {
+        transactionTemplate().execute(status -> persistGraph("QUERY-METADATA"));
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 1
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.last").isBoolean())
+                .andExpect(jsonPath("$.totalPages").isNumber())
+                .andExpect(jsonPath("$.totalElements").isNumber());
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API reports only page validation errors when page is invalid")
+    void queryInvoices_rejectsOnlyNegativePage() throws Exception {
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": -1,
+                                  "size": 10
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.fieldErrors.page").exists())
+                .andExpect(jsonPath("$.fieldErrors.size").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API reports only size validation errors when size is invalid")
+    void queryInvoices_rejectsOnlyZeroSize() throws Exception {
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 0
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.fieldErrors.size").exists())
+                .andExpect(jsonPath("$.fieldErrors.page").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API applies defaults for explicit null fields")
+    void queryInvoices_appliesDefaultsForNullFields() throws Exception {
+        transactionTemplate().execute(status -> persistGraph("QUERY-NULL-DEFAULTS"));
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": null,
+                                  "size": null,
+                                  "sort": null
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API applies id ASC default sort for empty sort list")
+    void queryInvoices_appliesDefaultSortForEmptySortList() throws Exception {
+        transactionTemplate().execute(status -> List.of(
+                persistGraph("QUERY-EMPTY-SORT-A").invoiceId(),
+                persistGraph("QUERY-EMPTY-SORT-B").invoiceId()));
+        List<Long> expectedIds = firstInvoiceIdsAsc(2);
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 2,
+                                  "sort": []
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(expectedIds.get(0)))
+                .andExpect(jsonPath("$.content[1].id").value(expectedIds.get(1)));
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API accepts explicit ascending sort")
+    void queryInvoices_acceptsAscendingSort() throws Exception {
+        transactionTemplate().execute(status -> List.of(
+                persistGraph("QUERY-SORT-ASC-A").invoiceId(),
+                persistGraph("QUERY-SORT-ASC-B").invoiceId()));
+        List<Long> expectedIds = firstInvoiceIdsAsc(2);
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 2,
+                                  "sort": ["id,asc"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(expectedIds.get(0)))
+                .andExpect(jsonPath("$.content[1].id").value(expectedIds.get(1)));
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API accepts multi-field sort")
+    void queryInvoices_acceptsMultiFieldSort() throws Exception {
+        List<Long> cancelledIds = transactionTemplate().execute(status -> List.of(
+                persistGraph("QUERY-MULTI-SORT-CANCELLED-A", InvoiceStatus.CANCELLED, "250.00").invoiceId(),
+                persistGraph("QUERY-MULTI-SORT-CANCELLED-B", InvoiceStatus.CANCELLED, "250.00").invoiceId(),
+                persistGraph("QUERY-MULTI-SORT-GENERATED", InvoiceStatus.GENERATED, "250.00").invoiceId()));
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 3,
+                                  "sort": ["status,asc", "id,desc"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].status").value("CANCELLED"))
+                .andExpect(jsonPath("$.content[0].id").value(cancelledIds.get(1)))
+                .andExpect(jsonPath("$.content[1].status").value("CANCELLED"))
+                .andExpect(jsonPath("$.content[1].id").value(cancelledIds.get(0)))
+                .andExpect(jsonPath("$.content[2].status").value("GENERATED"));
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API returns populated invoice response fields")
+    void queryInvoices_returnsPopulatedInvoiceFields() throws Exception {
+        TestGraph graph = transactionTemplate().execute(status -> persistGraph("QUERY-FIELDS"));
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 1,
+                                  "sort": ["id,desc"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(graph.invoiceId()))
+                .andExpect(jsonPath("$.content[0].invoiceNumber").value("INV-QUERY-FIELDS"))
+                .andExpect(jsonPath("$.content[0].customerId").value(graph.customerId()))
+                .andExpect(jsonPath("$.content[0].amount").value(250.00))
+                .andExpect(jsonPath("$.content[0].status").value("GENERATED"));
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API accepts amount sorting")
+    void queryInvoices_acceptsSortByAmount() throws Exception {
+        TestGraph highestAmountGraph = transactionTemplate().execute(status -> {
+            persistGraph("QUERY-AMOUNT-SORT-LOW", InvoiceStatus.GENERATED, "1.00");
+            return persistGraph("QUERY-AMOUNT-SORT-HIGH", InvoiceStatus.GENERATED, "999999.00");
+        });
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 1,
+                                  "sort": ["amount,desc"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(highestAmountGraph.invoiceId()))
+                .andExpect(jsonPath("$.content[0].amount").value(999999.00));
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API skips blank sort entries")
+    void queryInvoices_skipsBlankSortEntries() throws Exception {
+        transactionTemplate().execute(status -> List.of(
+                persistGraph("QUERY-BLANK-SORT-A").invoiceId(),
+                persistGraph("QUERY-BLANK-SORT-B").invoiceId()));
+        List<Long> expectedIds = firstInvoiceIdsAsc(2);
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 2,
+                                  "sort": ["", "id,asc"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(expectedIds.get(0)))
+                .andExpect(jsonPath("$.content[1].id").value(expectedIds.get(1)));
+    }
+
+    @Test
+    @DisplayName("GET invoice API with JSON body does not use QUERY handler")
+    void getInvoices_withJsonContentType_doesNotSetAcceptQueryHeader() throws Exception {
+        transactionTemplate().execute(status -> persistGraph("GET-NOT-QUERY"));
+
+        mockMvc.perform(get("/api/invoices")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 1
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Accept-Query"))
+                .andExpect(jsonPath("$.size").value(20));
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API applies default page when only size is specified")
+    void queryInvoices_appliesDefaultPageForNullPage() throws Exception {
+        transactionTemplate().execute(status -> persistGraph("QUERY-DEFAULT-PAGE"));
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "size": 5
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size").value(5))
+                .andExpect(jsonPath("$.number").value(0));
+    }
+
+    @Test
     @DisplayName("OpenAPI does not expose unsupported QUERY as executable HEAD operation")
     void openApi_doesNotExposeQueryAsHeadOperation() throws Exception {
         String body = mockMvc.perform(get("/v3/api-docs").accept(MediaType.APPLICATION_JSON))
@@ -503,6 +799,10 @@ class ReliabilityHardeningIntegrationTest {
     }
 
     private TestGraph persistGraph(String suffix) {
+        return persistGraph(suffix, InvoiceStatus.GENERATED, "250.00");
+    }
+
+    private TestGraph persistGraph(String suffix, InvoiceStatus invoiceStatus, String amount) {
         Customer customer = customerRepository.save(Customer.builder()
                 .customerNumber("CUST-" + suffix)
                 .name("Scoped Tester")
@@ -531,9 +831,9 @@ class ReliabilityHardeningIntegrationTest {
                 .previousReading(previous.getReadingValue())
                 .currentReading(current.getReadingValue())
                 .unitsConsumed(new BigDecimal("50.00"))
-                .amount(new BigDecimal("250.00"))
+                .amount(new BigDecimal(amount))
                 .generatedDate(LocalDate.of(2024, 2, 1))
-                .status(InvoiceStatus.GENERATED)
+                .status(invoiceStatus)
                 .previousReadingRecord(previous)
                 .currentReadingRecord(current)
                 .build());
@@ -550,6 +850,10 @@ class ReliabilityHardeningIntegrationTest {
                 BigDecimal.class,
                 invoiceNumber);
         assertThat(amount).isEqualByComparingTo(expectedAmount);
+    }
+
+    private List<Long> firstInvoiceIdsAsc(int limit) {
+        return jdbcTemplate.queryForList("select id from invoices order by id asc limit ?", Long.class, limit);
     }
 
     private record TestGraph(Long customerId, Long meterId, Long invoiceId) {

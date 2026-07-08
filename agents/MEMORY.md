@@ -45,6 +45,12 @@ When asserting seeded row counts, count migration inserts directly before propos
 ### Constrain delegated edits to approved artifact paths [ACTIVE]
 After subagent implementation, inspect `git status` and revert only unapproved artifact-path changes before validation; generated outputs can otherwise drift outside the requested structure.
 
+### Ground order assertions in full fixture state [ACTIVE]
+When integration tests share seeded data, compute or filter expected ordering from the actual persisted dataset instead of assuming newly inserted rows are first.
+
+### Run build tools from executable module roots [ACTIVE]
+Before invoking wrapper commands, locate the wrapper file and run from its module root to avoid false tool failures.
+
 ### <Generalized Preventive Rule> [ACTIVE|RETIRED]
 [Root cause, Reasons, Problems]
 

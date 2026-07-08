@@ -110,6 +110,7 @@ Style: concise, grep-friendly, and non-duplicative.
 - Hid the RFC 10008 endpoint from Swagger UI because OpenAPI 3.0 cannot represent `QUERY` and springdoc otherwise exposes a broken executable HEAD operation.
 - Added dedicated MockMvc regression coverage for `QUERY /api/invoices` with `{"page":0,"size":1,"sort":["string"]}`, default body values, `id,desc` sorting, validation errors, unsupported media type, malformed JSON, and OpenAPI non-exposure.
 - Added explicit global handlers for unreadable request bodies and unsupported content types so JSON-query client errors return 400/415 instead of generic 500.
+- Expanded `QUERY /api/invoices` MockMvc coverage for missing JSON body, placeholder/default/blank/ascending/multi-field/amount sort behavior, out-of-range pages, pagination metadata, isolated field validation errors, explicit null defaults, populated invoice fields, GET-vs-QUERY routing separation, and size-only default-page behavior.
 
 - Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
 - Created root and service README files for workspace navigation and local service entry points.
