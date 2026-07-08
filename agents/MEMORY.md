@@ -36,6 +36,9 @@ For seed migrations, assert the exact user-facing table outcomes, not only that 
 ### Reproduce generated-client placeholders for pageable APIs [ACTIVE]
 When pageable APIs are documented through Swagger/OpenAPI, test generated placeholder query values in addition to hand-written valid parameters.
 
+### Check documentation-tool method support before exposing new HTTP verbs [ACTIVE]
+When adding non-standard or newly standardized HTTP methods, verify OpenAPI/Swagger/client support separately from server support; hide or document unsupported UI surfaces instead of letting tools generate invalid requests.
+
 ### Ground seed cardinality in migrations before approval [ACTIVE]
 When asserting seeded row counts, count migration inserts directly before proposing exact cardinalities; if discovery conflicts with source, stop for explicit approval.
 

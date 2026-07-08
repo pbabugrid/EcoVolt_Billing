@@ -36,7 +36,7 @@ Style: concise, evidence-grounded, grep-friendly. Business context belongs in `d
 - `POST /api/readings`, `GET /api/readings` (paged).
 - `POST /api/invoices/generate/{customerId}`, `GET /api/invoices` (paged), `QUERY /api/invoices` (paged), `GET /api/invoices/{id}`, `POST /api/invoices/{id}/pay`, `POST /api/invoices/{id}/cancel`.
 - `POST /api/tariff-plans`, `GET /api/tariff-plans` (paged), `GET /api/tariff-plans/{id}`, `PUT /api/tariff-plans/{id}/deactivate`.
-- Pageable endpoints default to page 0, size 20, sorted by `id ASC` unless request parameters override them; `QUERY /api/invoices` is a safe/idempotent read equivalent that accepts JSON body fields `page`, `size`, and `sort`, and returns `Accept-Query: application/json`.
+- Pageable endpoints default to page 0, size 20, sorted by `id ASC` unless request parameters override them; `QUERY /api/invoices` is a safe/idempotent read equivalent that accepts JSON body fields `page`, `size`, and `sort`, and returns `Accept-Query: application/json`; it is hidden from Swagger UI because OpenAPI 3.0 cannot represent the RFC 10008 `QUERY` method.
 - Invoice generation returns `201 Created`; customer delete/deactivate returns `204 No Content`; detail and invoice lifecycle endpoints return DTOs directly.
 
 ## Domain Relationships

@@ -12,6 +12,8 @@ import com.ecovolt.billing.meter.MeterRepository;
 import com.ecovolt.billing.meter.MeterStatus;
 import com.ecovolt.billing.reading.MeterReading;
 import com.ecovolt.billing.reading.MeterReadingRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.DisplayName;
@@ -58,6 +60,7 @@ class ReliabilityHardeningIntegrationTest {
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired MockMvc mockMvc;
     @Autowired JdbcTemplate jdbcTemplate;
+    @Autowired ObjectMapper objectMapper;
 
     @Test
     @DisplayName("JPA auditing populates timestamps automatically")
@@ -359,6 +362,88 @@ class ReliabilityHardeningIntegrationTest {
                 .andExpect(header().string("Accept-Query", "application/json"))
                 .andExpect(jsonPath("$.size").value(1))
                 .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API applies default pagination from empty JSON body")
+    void queryInvoices_appliesDefaultsForEmptyBody() throws Exception {
+        transactionTemplate().execute(status -> persistGraph("QUERY-DEFAULTS"));
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Accept-Query", "application/json"))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API accepts explicit descending sort in JSON body")
+    void queryInvoices_acceptsDescendingSort() throws Exception {
+        List<Long> ids = transactionTemplate().execute(status -> List.of(
+                persistGraph("QUERY-SORT-A").invoiceId(),
+                persistGraph("QUERY-SORT-B").invoiceId()));
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 2,
+                                  "sort": ["id,desc"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(ids.get(1)))
+                .andExpect(jsonPath("$.content[1].id").value(ids.get(0)));
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API validates pagination body")
+    void queryInvoices_validatesPaginationBody() throws Exception {
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": -1,
+                                  "size": 0
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.fieldErrors.page").exists())
+                .andExpect(jsonPath("$.fieldErrors.size").exists());
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API rejects unsupported or malformed JSON body")
+    void queryInvoices_rejectsUnsupportedOrMalformedBody() throws Exception {
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("page=0&size=1"))
+                .andExpect(status().isUnsupportedMediaType());
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("OpenAPI does not expose unsupported QUERY as executable HEAD operation")
+    void openApi_doesNotExposeQueryAsHeadOperation() throws Exception {
+        String body = mockMvc.perform(get("/v3/api-docs").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode invoicePath = objectMapper.readTree(body).path("paths").path("/api/invoices");
+        assertThat(invoicePath.has("get")).isTrue();
+        assertThat(invoicePath.has("head")).isFalse();
+        assertThat(invoicePath.has("requestBody")).isFalse();
     }
 
     @Test
