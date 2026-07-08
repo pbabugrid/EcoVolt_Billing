@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -39,7 +40,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -335,6 +338,18 @@ class ReliabilityHardeningIntegrationTest {
 
         mockMvc.perform(get("/api/customers/{id}/invoices", graph.customerId()).param("sort", placeholderSort))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    @DisplayName("QUERY invoice API returns paginated result with Accept-Query header")
+    void queryInvoices_returnsPagedResponse() throws Exception {
+        transactionTemplate().execute(status -> persistGraph("QUERY"));
+
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices?page=0&size=1&sort=%5B%22string%22%5D")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Accept-Query", "application/x-www-form-urlencoded"))
+                .andExpect(jsonPath("$.size").value(1))
                 .andExpect(jsonPath("$.content").isArray());
     }
 

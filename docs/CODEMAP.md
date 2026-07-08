@@ -76,17 +76,21 @@ Generated / ignored: `.gradle/`, `build/`
 
 Files: `gradle-wrapper.jar` _(binary)_, `gradle-wrapper.properties`
 
-### /billing-service/src/main/java/com/ecovolt/billing — 45 Java source files
+### /billing-service/src/main/java/com/ecovolt/billing — 49 Java source files
 
 Files (root): `BillingServiceApplication.java`
 
-#### …/common — 1 file — shared base entity
+#### …/common — 2 entries — shared base entity and HTTP helpers
 
 Files: `BaseEntity.java`
 
-#### …/config — 1 file — OpenAPI configuration
+##### …/common/http — 3 files
 
-Files: `OpenApiConfig.java`
+Files: `QueryMethod.java`, `QueryMethodRequestCondition.java`, `QueryMethodRequestMappingHandlerMapping.java`
+
+#### …/config — 2 files — application configuration
+
+Files: `OpenApiConfig.java`, `QueryMethodWebMvcConfig.java`
 
 #### …/customer — 6 files — customer domain
 

@@ -1,5 +1,6 @@
 package com.ecovolt.billing.invoice;
 
+import com.ecovolt.billing.common.http.QueryMethod;
 import com.ecovolt.billing.invoice.dto.InvoiceResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +25,9 @@ import java.util.List;
 @Tag(name = "Invoices", description = "Invoice generation and retrieval")
 public class InvoiceController {
 
+    private static final String ACCEPT_QUERY = "Accept-Query";
+    private static final String FORM_QUERY_MEDIA_TYPE = "application/x-www-form-urlencoded";
+
     private final InvoiceService invoiceService;
     private final InvoiceGenerationService invoiceGenerationService;
 
@@ -38,6 +42,16 @@ public class InvoiceController {
     @Operation(summary = "List invoices with pagination")
     public Page<InvoiceResponse> findAll(@PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
         return invoiceService.findAll(pageable);
+    }
+
+    @QueryMethod
+    @RequestMapping
+    @Operation(summary = "Query invoices with pagination")
+    public ResponseEntity<Page<InvoiceResponse>> queryAll(
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok()
+                .header(ACCEPT_QUERY, FORM_QUERY_MEDIA_TYPE)
+                .body(invoiceService.findAll(pageable));
     }
 
     @GetMapping("/{id}")
