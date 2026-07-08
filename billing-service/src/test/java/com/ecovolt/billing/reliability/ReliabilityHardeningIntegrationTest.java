@@ -346,9 +346,17 @@ class ReliabilityHardeningIntegrationTest {
     void queryInvoices_returnsPagedResponse() throws Exception {
         transactionTemplate().execute(status -> persistGraph("QUERY"));
 
-        mockMvc.perform(request("QUERY", URI.create("/api/invoices?page=0&size=1&sort=%5B%22string%22%5D")))
+        mockMvc.perform(request("QUERY", URI.create("/api/invoices"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "page": 0,
+                                  "size": 1,
+                                  "sort": ["string"]
+                                }
+                                """))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Accept-Query", "application/x-www-form-urlencoded"))
+                .andExpect(header().string("Accept-Query", "application/json"))
                 .andExpect(jsonPath("$.size").value(1))
                 .andExpect(jsonPath("$.content").isArray());
     }

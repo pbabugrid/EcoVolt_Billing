@@ -105,9 +105,9 @@ Style: concise, grep-friendly, and non-duplicative.
 ## 2026-07-08 — RFC 10008 QUERY support for invoice pagination
 
 - Added Spring MVC custom request-condition support for HTTP `QUERY` methods using `@QueryMethod`.
-- Added `QUERY /api/invoices` as a safe/idempotent equivalent to pageable `GET /api/invoices`; it reuses `InvoiceService.findAll(Pageable)` and returns `Accept-Query: application/x-www-form-urlencoded`.
-- Preserved existing `page`, `size`, and sanitized `sort=["string"]` pageable behavior.
-- Added dedicated MockMvc regression coverage for `QUERY /api/invoices?page=0&size=1&sort=%5B%22string%22%5D`.
+- Added `QUERY /api/invoices` as a safe/idempotent equivalent to pageable `GET /api/invoices`; it accepts JSON body fields `page`, `size`, and `sort`, reuses `InvoiceService.findAll(Pageable)`, and returns `Accept-Query: application/json`.
+- Preserved existing default pagination and sanitized `sort=["string"]` behavior for the JSON request body.
+- Added dedicated MockMvc regression coverage for `QUERY /api/invoices` with `{"page":0,"size":1,"sort":["string"]}`.
 
 - Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
 - Created root and service README files for workspace navigation and local service entry points.

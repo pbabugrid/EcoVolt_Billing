@@ -1,19 +1,23 @@
 package com.ecovolt.billing.invoice;
 
 import com.ecovolt.billing.common.http.QueryMethod;
+import com.ecovolt.billing.invoice.dto.InvoiceQueryRequest;
 import com.ecovolt.billing.invoice.dto.InvoiceResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,7 +30,7 @@ import java.util.List;
 public class InvoiceController {
 
     private static final String ACCEPT_QUERY = "Accept-Query";
-    private static final String FORM_QUERY_MEDIA_TYPE = "application/x-www-form-urlencoded";
+    private static final String JSON_QUERY_MEDIA_TYPE = MediaType.APPLICATION_JSON_VALUE;
 
     private final InvoiceService invoiceService;
     private final InvoiceGenerationService invoiceGenerationService;
@@ -45,13 +49,12 @@ public class InvoiceController {
     }
 
     @QueryMethod
-    @RequestMapping
-    @Operation(summary = "Query invoices with pagination")
-    public ResponseEntity<Page<InvoiceResponse>> queryAll(
-            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+    @RequestMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Query invoices with JSON pagination")
+    public ResponseEntity<Page<InvoiceResponse>> queryAll(@Valid @RequestBody InvoiceQueryRequest request) {
         return ResponseEntity.ok()
-                .header(ACCEPT_QUERY, FORM_QUERY_MEDIA_TYPE)
-                .body(invoiceService.findAll(pageable));
+                .header(ACCEPT_QUERY, JSON_QUERY_MEDIA_TYPE)
+                .body(invoiceService.findAll(request.toPageable()));
     }
 
     @GetMapping("/{id}")

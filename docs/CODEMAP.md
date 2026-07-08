@@ -76,7 +76,7 @@ Generated / ignored: `.gradle/`, `build/`
 
 Files: `gradle-wrapper.jar` _(binary)_, `gradle-wrapper.properties`
 
-### /billing-service/src/main/java/com/ecovolt/billing — 49 Java source files
+### /billing-service/src/main/java/com/ecovolt/billing — 50 Java source files
 
 Files (root): `BillingServiceApplication.java`
 
@@ -108,9 +108,9 @@ Files: `ApiError.java`, `BillingException.java`, `GlobalExceptionHandler.java`, 
 
 Files: `Invoice.java`, `InvoiceController.java`, `InvoiceGenerationService.java`, `InvoiceRepository.java`, `InvoiceService.java`, `InvoiceStatus.java`
 
-##### …/invoice/dto — 1 file
+##### …/invoice/dto — 2 files
 
-Files: `InvoiceResponse.java`
+Files: `InvoiceQueryRequest.java`, `InvoiceResponse.java`
 
 #### …/meter — 6 files — meter domain
 
