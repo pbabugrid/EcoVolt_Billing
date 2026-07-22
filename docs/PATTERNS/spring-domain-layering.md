@@ -61,3 +61,10 @@ meter type). Do NOT apply to cross-cutting concerns or infrastructure utilities.
 - Services: `InvoiceService.java`, `InvoiceGenerationService.java`
 - Controller: `InvoiceController.java`
 - DTOs: `dto/InvoiceResponse.java`
+
+### tariff
+
+- Entities: `billing-service/src/main/java/com/ecovolt/billing/tariff/TariffPlan.java`, `TariffSlab.java`
+- Service: `TariffService.java`
+- Controller: `TariffController.java`
+- DTOs: `dto/TariffPlanRequest.java`, `dto/TariffPlanResponse.java`, `dto/TariffSlabRequest.java`, `dto/TariffSlabResponse.java`

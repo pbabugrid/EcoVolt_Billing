@@ -6,7 +6,7 @@
 - Mode: plugin
 - Plugin active: true
 - Composite: false
-- File count: 46 source/config files under billing-service excluding generated build and Gradle cache artifacts
+- File count: 63 Java source/test files under billing-service excluding generated build and Gradle cache artifacts
 - Current phase: COMPLETE
 
 ## Phase Status
@@ -15,10 +15,11 @@
 - Phase 2 shells: skipped; plugin mode is active
 - Phase 3 discovery: complete
 - Phase 4 rules: skipped; permanently disabled by workflow
-- Phase 5 patterns: complete; PATTERNS inventory created (7 patterns, 3 explicit skips)
-- Phase 6 documentation: complete
-- Phase 7 questions: complete
-- Phase 8 verification: complete
+- Phase 5 patterns: complete; PATTERNS inventory refreshed (7 patterns, 5 explicit skips)
+- Phase 6 codegraph: complete; default `CODEMAP.md` selected by user
+- Phase 7 documentation: complete
+- Phase 8 questions: complete
+- Phase 9 verification: complete
 
 ## File Inventory
 
@@ -59,9 +60,13 @@
 - Resolved: invoice generation uses same-meter readings and generates one invoice per eligible meter.
 - Resolved: H2 in-memory persistence is local development/test only.
 - Resolved: SDLC placeholders in `gain.json` are intentionally unresolved until real values are known.
+- Resolved: Phase 6 code navigation backend is the built-in `CODEMAP.md`; no third-party code graph or LSP is required.
 
 ## Verification
 
-- Phase 8 review: passed.
-- Service tests: passed with Gradle test task.
+- Phase 9 file existence: passed for required Rosetta docs and indexes.
+- Phase 9 init integrity: passed; plugin mode active, composite false, shells skipped.
+- Phase 9 cross-file consistency: passed after refreshing Phase 5 pattern evidence and Phase 6 codegraph status.
+- Phase 9 questions: passed; SDLC placeholders remain intentionally deferred except `code_graph`.
+- Service tests: previously passed with Gradle test task.
 - Status: COMPLETE.

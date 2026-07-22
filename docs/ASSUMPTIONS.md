@@ -29,8 +29,15 @@ Style: concise, forward-referenced, and revalidated after documentation changes.
 
 - Assumption: Placeholder values in `gain.json` are intentionally unresolved initialization scaffolding until real SDLC integrations are known.
 - Confidence: High.
-- Evidence: user confirmation during Rosetta initialization; multiple bracketed placeholder values remain in `gain.json`.
+- Evidence: user confirmation during Rosetta initialization; multiple bracketed placeholder values remain in `gain.json`; code graph was resolved to `CODEMAP.md` on 2026-07-23.
 - Target when resolved: `gain.json`, `docs/CONTEXT.md`, `agents/MEMORY.md` if operational workflow rules change.
+
+## Resolved code navigation backend
+
+- Resolution: Use built-in `CODEMAP.md` only; no third-party code graph and no LSP setup required for this workspace.
+- Confidence: High.
+- Evidence: user selection during current init-workspace-flow Phase 6.
+- Updated: `gain.json`, `agents/init-workspace-flow-state.md`.
 
 ## Resolved generated artifacts policy
 

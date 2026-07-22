@@ -23,3 +23,14 @@
 ### Source scanned
 
 `billing-service/src/main/java/com/ecovolt/billing` — 35 Java files across 8 packages
+
+## [2026-07-23] Phase 5 — Pattern inventory refreshed for current codemap
+
+### Updated
+
+- `INDEX.md` — refreshed source count from 35 to 50 main Java files and aligned evidence counts with current customer, meter, reading, invoice, tariff, common, config, and exception modules.
+- Explicit skip reasons expanded for custom QUERY HTTP infrastructure and `PageableSanitizer`.
+
+### Source scanned
+
+`billing-service/src/main/java/com/ecovolt/billing` — 50 main Java files across domain, common, config, and exception packages

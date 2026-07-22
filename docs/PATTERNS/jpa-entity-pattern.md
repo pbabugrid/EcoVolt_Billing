@@ -60,3 +60,5 @@ public class {Domain} extends BaseEntity {
 - `billing-service/src/main/java/com/ecovolt/billing/meter/Meter.java` (ManyToOne customer, OneToMany readings)
 - `billing-service/src/main/java/com/ecovolt/billing/reading/MeterReading.java` (ManyToOne meter, BigDecimal value)
 - `billing-service/src/main/java/com/ecovolt/billing/invoice/Invoice.java` (multiple ManyToOne, composite unique constraint)
+- `billing-service/src/main/java/com/ecovolt/billing/tariff/TariffPlan.java` (OneToMany slabs, effective windows)
+- `billing-service/src/main/java/com/ecovolt/billing/tariff/TariffSlab.java` (tariff slab entity with direct optimistic lock)

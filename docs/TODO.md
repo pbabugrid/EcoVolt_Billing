@@ -6,7 +6,7 @@ Style: each entry header includes priority, when, what, and where.
 
 ## P2 Future Replace SDLC placeholders in gain.json
 
-- `gain.json` contains placeholders for issue tracking, wiki, build management, UX, infrastructure, IaC, hosting, logging, security, E2E tests, performance tests, and code graph.
+- `gain.json` contains placeholders for issue tracking, wiki, build management, UX, infrastructure, IaC, hosting, logging, security, E2E tests, and performance tests.
 - Placeholders are intentionally unresolved until real tools are known.
 - Replace placeholders with confirmed integrations or remove unused categories during future workspace maintenance.
 

@@ -1,13 +1,13 @@
 # PATTERNS INDEX
 
-Patterns extracted from `billing-service/src/main/java/com/ecovolt/billing` (35 Java source files, Spring Boot 3.5 / Java 25).
+Patterns extracted from `billing-service/src/main/java/com/ecovolt/billing` (50 main Java source files, Spring Boot 3.5 / Java 25).
 
 ---
 
 ## spring-domain-layering — Vertical slice: Entity/Repository/Service/Controller/dto
 
-Every domain module (customer, meter, reading, invoice) repeats an identical four-layer
-vertical slice. Adding a new domain means replicating this file set. Evidence: 4 domains.
+Domain modules (customer, meter, reading, invoice, tariff) repeat the vertical-slice
+structure. Adding a new domain means replicating this file set. Evidence: 5 domains.
 
 File: `docs/PATTERNS/spring-domain-layering.md`
 
@@ -15,7 +15,7 @@ File: `docs/PATTERNS/spring-domain-layering.md`
 
 All REST controllers declare `@RestController`, `@RequestMapping("/api/{resource}")`,
 `@RequiredArgsConstructor`, `@Tag`, per-method `@Operation`. POST returns 201 via
-`ResponseEntity`; GETs return the DTO directly. Evidence: 4 controllers.
+`ResponseEntity`; GETs return the DTO directly. Evidence: 5 controllers.
 
 File: `docs/PATTERNS/rest-controller-pattern.md`
 
@@ -23,7 +23,7 @@ File: `docs/PATTERNS/rest-controller-pattern.md`
 
 All JPA entities extend the shared `BaseEntity` (`createdAt`/`updatedAt`), carry the
 full Lombok builder stack, use `GenerationType.IDENTITY` PK, `EnumType.STRING`, named
-unique constraints, and `FetchType.LAZY` associations. Evidence: 4 entities.
+unique constraints, and `FetchType.LAZY` associations. Evidence: 6 entities.
 
 File: `docs/PATTERNS/jpa-entity-pattern.md`
 
@@ -31,7 +31,7 @@ File: `docs/PATTERNS/jpa-entity-pattern.md`
 
 Inbound DTOs are Java `record` types with per-field Bean Validation constraints.
 Outbound DTOs are Java `record` types with a single static `from(Entity)` factory.
-Evidence: 7 DTO classes across 4 domains.
+Evidence: 12 DTO classes across 5 domains.
 
 File: `docs/PATTERNS/dto-mapping-pattern.md`
 
@@ -39,7 +39,7 @@ File: `docs/PATTERNS/dto-mapping-pattern.md`
 
 `ResourceNotFoundException` (→ 404) and `BillingException` (→ 422) are thrown from
 services. `GlobalExceptionHandler` centralises mapping to a uniform `ApiError` record.
-Evidence: 4 exception classes, used in 5 services.
+Evidence: 4 exception classes, used across domain services.
 
 File: `docs/PATTERNS/exception-handling-pattern.md`
 
@@ -67,10 +67,18 @@ File: `docs/PATTERNS/unique-key-generation-pattern.md`
 
 Single configuration class; no recurring structure to abstract.
 
+### config/QueryMethodWebMvcConfig.java and common/http
+
+Single custom HTTP method extension for RFC 10008 QUERY support; keep as architecture documentation, not a reusable pattern, until another custom method integration exists.
+
+### common/PageableSanitizer.java
+
+Single cross-cutting helper for Swagger/OpenAPI pageable placeholder tolerance; not a recurring structure.
+
 ### tariff/TariffService.java
 
-Single-instance strategy service; pattern coverage is pending if a second tariff strategy is introduced.
+Single tariff calculation service; controller, DTO, entity, and repository conventions are already covered by the main patterns.
 
 ### billing-service tests
 
-Current tests include the context smoke test plus focused service and integration tests for invoice generation and reading validation. A reusable test pattern document is pending until similar coverage exists across multiple modules.
+Current tests include smoke, service, integration, workflow, Flyway, tariff, customer, invoice, reading, and reliability coverage. A reusable test pattern document remains pending until the test conventions stabilize across more modules.

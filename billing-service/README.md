@@ -8,7 +8,7 @@ Spring Boot service for utility billing domain operations.
 - Meter registration and listing
 - Meter reading capture
 - Invoice generation and retrieval
-- Flat tariff calculation
+- Versioned tariff plan calculation
 
 Payments and reporting are future scope and are not implemented in source packages yet.
 

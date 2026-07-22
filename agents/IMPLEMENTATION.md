@@ -117,3 +117,9 @@ Style: concise, grep-friendly, and non-duplicative.
 - Added dedicated MockMvc regression coverage for `QUERY /api/invoices` with `{"page":0,"size":1,"sort":["string"]}`, default body values, `id,desc` sorting, validation errors, unsupported media type, malformed JSON, and OpenAPI non-exposure.
 - Added explicit global handlers for unreadable request bodies and unsupported content types so JSON-query client errors return 400/415 instead of generic 500.
 - Expanded `QUERY /api/invoices` MockMvc coverage for missing JSON body, placeholder/default/blank/ascending/multi-field/amount sort behavior, out-of-range pages, pagination metadata, isolated field validation errors, explicit null defaults, populated invoice fields, GET-vs-QUERY routing separation, and size-only default-page behavior.
+
+## 2026-07-23 — Rosetta init workflow state aligned with current phases
+
+- Updated init-workspace-flow state to the current 9-phase workflow numbering.
+- Recorded Phase 6 code navigation selection as built-in `CODEMAP.md`.
+- Refreshed Phase 5 pattern inventory evidence against the current codemap.

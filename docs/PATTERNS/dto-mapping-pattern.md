@@ -62,3 +62,8 @@ public record {Domain}Response(
 - `billing-service/src/main/java/com/ecovolt/billing/reading/dto/MeterReadingRequest.java` — @PositiveOrZero, @PastOrPresent
 - `billing-service/src/main/java/com/ecovolt/billing/reading/dto/MeterReadingResponse.java` — static `from(MeterReading)`
 - `billing-service/src/main/java/com/ecovolt/billing/invoice/dto/InvoiceResponse.java` — static `from(Invoice)` (read-only; no request DTO for generation)
+- `billing-service/src/main/java/com/ecovolt/billing/invoice/dto/InvoiceQueryRequest.java` — JSON body request for QUERY pagination defaults
+- `billing-service/src/main/java/com/ecovolt/billing/tariff/dto/TariffPlanRequest.java` — nested slab validation
+- `billing-service/src/main/java/com/ecovolt/billing/tariff/dto/TariffPlanResponse.java` — static `from(TariffPlan)`
+- `billing-service/src/main/java/com/ecovolt/billing/tariff/dto/TariffSlabRequest.java` — slab band validation
+- `billing-service/src/main/java/com/ecovolt/billing/tariff/dto/TariffSlabResponse.java` — static `from(TariffSlab)`
