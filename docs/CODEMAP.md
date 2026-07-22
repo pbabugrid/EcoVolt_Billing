@@ -1,5 +1,8 @@
 # CODEMAP
 
+This document maps the repository structure for agent navigation.
+Content: workspace directories, important files, source modules, tests, documentation, and generated/ignored boundaries. Style: concise, shell-output-like, and grep-friendly.
+
 ## / — workspace root
 
 Files:
@@ -28,9 +31,13 @@ Files: `hooks.json`
 
 Files: `bootstrap-core-policy.instructions.md`, `bootstrap-execution-policy.instructions.md`, `bootstrap-guardrails.instructions.md`, `bootstrap-hitl-questioning.instructions.md`, `bootstrap-rosetta-files.instructions.md`, `plugin-files-mode.instructions.md`
 
-#### /.github/prompts — 32 workflow prompt files
+#### /.github/prompts — 44 workflow prompt files
 
 Files: `INDEX.md`, `adhoc-flow.prompt.md`, `aqa-flow*.prompt.md` (9), `code-analysis-flow.prompt.md`, `coding-agents-prompting-flow.prompt.md`, `coding-flow.prompt.md`, `external-lib-flow.prompt.md`, `init-workspace-flow*.prompt.md` (9), `modernization-flow*.prompt.md` (9), `requirements-authoring-flow.prompt.md`, `research-flow.prompt.md`, `self-help-flow.prompt.md`, `testgen-flow*.prompt.md` (8)
+
+#### /.github/workflows — CI workflow files
+
+Files: `postman-newman.yml`
 
 #### /.github/rules — 6 rule files
 
@@ -42,19 +49,41 @@ Notable skills: `coding`, `dangerous-actions`, `debugging`, `deviation`, `hitl`,
 
 ### /agents — Rosetta agent state and memory
 
-Files: `IMPLEMENTATION.md`, `MEMORY.md`, `init-workspace-flow-state.md`
+Files: `IMPLEMENTATION.md`, `MEMORY.md`, `aqa-state.md`, `init-workspace-flow-state.md`
 
 ### /docs — Rosetta documentation
 
 Files: `ARCHITECTURE.md`, `ASSUMPTIONS.md`, `CODEMAP.md`, `CONTEXT.md`, `DEPENDENCIES.md`, `TECHSTACK.md`, `TODO.md`
 
-Subdirectories: `PATTERNS/`, `REQUIREMENTS/`
+Subdirectories: `PATTERNS/`, `REQUIREMENTS/`, `billing-service-analysis/`
 
-### /plans — Rosetta plans (empty)
+#### /docs/billing-service-analysis — service analysis notes
+
+Files: `module-customer.md`, `module-invoice.md`, `module-meter-reading.md`, `module-platform.md`, `module-tariff.md`, `summary.md`
+
+### /plans — Rosetta plans workspace
 
 ### /refsrc — reference source policy
 
 Files: `INDEX.md`
+
+### /postman — Newman/Postman API test suite
+
+Files: `README.md`
+
+Subdirectories: `collections/`, `environments/`, `scripts/`
+
+#### /postman/collections — Postman collections
+
+Files: `EcoVolt-Billing.postman_collection.json`
+
+#### /postman/environments — Postman environments
+
+Files: `ci.postman_environment.json`, `local.postman_environment.json`
+
+#### /postman/scripts — Newman helper scripts
+
+Files: `run-newman.sh`
 
 ---
 
@@ -82,7 +111,7 @@ Files (root): `BillingServiceApplication.java`
 
 #### …/common — 2 entries — shared base entity and HTTP helpers
 
-Files: `BaseEntity.java`
+Files: `BaseEntity.java`, `PageableSanitizer.java`
 
 ##### …/common/http — 3 files
 

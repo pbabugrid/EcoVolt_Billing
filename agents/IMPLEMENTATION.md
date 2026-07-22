@@ -91,6 +91,12 @@ Style: concise, grep-friendly, and non-duplicative.
 - Covered customer, meter, reading, invoice, tariff detail/deactivation, customer-scoped meter/invoice, pagination, lifecycle, validation, missing entity, duplicate meter, duplicate-customer feasibility, and optimistic-lock feasibility scenarios.
 - Added end-to-end workflow from customer creation through paid invoice verification and embedded Newman CI command.
 
+## 2026-06-24 — Rosetta workspace initialization
+
+- Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
+- Created root and service README files for workspace navigation and local service entry points.
+- Updated initialization workflow state to COMPLETE after Phase 8 verification.
+
 ## 2026-06-26 — Postman/Newman structured test suite
 
 - Added `postman/` directory with full Newman-runnable API test suite.
@@ -111,7 +117,3 @@ Style: concise, grep-friendly, and non-duplicative.
 - Added dedicated MockMvc regression coverage for `QUERY /api/invoices` with `{"page":0,"size":1,"sort":["string"]}`, default body values, `id,desc` sorting, validation errors, unsupported media type, malformed JSON, and OpenAPI non-exposure.
 - Added explicit global handlers for unreadable request bodies and unsupported content types so JSON-query client errors return 400/415 instead of generic 500.
 - Expanded `QUERY /api/invoices` MockMvc coverage for missing JSON body, placeholder/default/blank/ascending/multi-field/amount sort behavior, out-of-range pages, pagination metadata, isolated field validation errors, explicit null defaults, populated invoice fields, GET-vs-QUERY routing separation, and size-only default-page behavior.
-
-- Created foundational Rosetta documentation for context, architecture, TODOs, assumptions, requirements index/change tracking, agent memory, and reference-source policy.
-- Created root and service README files for workspace navigation and local service entry points.
-- Updated initialization workflow state to COMPLETE after Phase 8 verification.

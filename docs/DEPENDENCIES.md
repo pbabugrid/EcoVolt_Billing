@@ -1,5 +1,8 @@
 # DEPENDENCIES
 
+This document captures direct project dependencies for the workspace.
+Content: declared plugins and dependencies with versions or dependency-management source. Style: concise, evidence-grounded, and grep-friendly.
+
 Source: `billing-service/build.gradle`
 
 ## Gradle Plugins

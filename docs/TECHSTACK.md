@@ -1,5 +1,8 @@
 # TECHSTACK
 
+This document captures detected technology stack information for the workspace.
+Content: languages, build tools, frameworks, persistence, documentation, code generation, testing, and project identity. Style: concise, evidence-grounded, and grep-friendly.
+
 ## Language
 
 | Item | Value | Source |
